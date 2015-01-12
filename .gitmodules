@@ -1,0 +1,6 @@
+[submodule "finpar"]
+	path = finpar
+	url = git@github.com:HIPERFIT/finpar.git
+[submodule "contracts"]
+	path = contracts
+	url = git@github.com:HIPERFIT/contracts.git
