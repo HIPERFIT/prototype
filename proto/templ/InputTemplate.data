@@ -1,0 +1,24 @@
+{|SUMMARY|}
+
+// Direction vectors
+{|DIRVECT|}
+
+// Model and market data
+   // Correlation
+{|CORR|}
+   
+   // Black-Sholes model data (volatility and drift) 
+{|MODELDATA|}
+   
+   // Prices at start date
+{|STARTPRICE|}
+
+   // Model deterministic values
+{|DETVALS|}
+
+   // Discounts
+{|DISCOUNTS|}
+// end model and market data
+
+// Brownian Bridge metadata
+{|BBMETA|}
