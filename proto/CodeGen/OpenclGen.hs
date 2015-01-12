@@ -16,6 +16,7 @@ import Contract.Date
 import Contract.Type
 import Contract.Transform
 import CodeGen.Utils
+import qualified CodeGen.Config as Conf
 
 
 -- data type representing AST of some simple imperative language
@@ -116,5 +117,5 @@ ppCLCode (Var v) = v
 
 writeOpenCL p fileName=
   do
-    template <- readFile "ContractTemplate.cl"
-    writeFile (fileName ++ ".cl") (replaceLabel "CODE" p template)
+    template <- readFile "proto/templ/ContractTemplate.cl"
+    writeFile (Conf.genCodePath ++ fileName ++ ".cl") (replaceLabel "CODE" p template)

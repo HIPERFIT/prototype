@@ -3,6 +3,8 @@ module CodeGen.Examples where
 import Contract
 import LexifiContracts
 import CodeGen.OpenclGen
+import CodeGen.DataGen
+import CodeGen.Utils
 
 -- Sample contracts
 
@@ -53,6 +55,52 @@ ex5 = checkWithin (strike !<! theobs) maturity
     where strike = r 50.0
           theobs = obs (equity,0)
 
+-- Example data for pricing engine (similar to Medium contract in finpar)
+exampleMarketData = (
+  exampleCorrs,
+  [Quotes "DJ_Eurostoxx_50" [(at "2012-01-27", 3758.0500000000001819)],
+   Quotes "Nikkei_225" [(at "2012-01-27", 11840.0)],
+   Quotes "SP_500" [(at "2012-01-27", 1200.0)]]
+  )
+
+exampleUnderlyings = ["DJ_Eurostoxx_50", "Nikkei_225", "SP_500"]
+
+exampleModelData = [
+  BS "DJ_Eurostoxx_50"
+  [(at "2012-01-27", 0.19, -0.0283491736871803),
+   (at "2012-01-27", 0.19, -0.0183841413744211),
+   (at "2012-01-27", 0.19, -0.0172686581005089),
+   (at "2012-01-27", 0.19, -0.0144179417871814),
+   (at "2012-01-27", 0.19, -0.0121497422218761)],
+  BS "Nikkei_225"
+  [(at "2012-01-27", 0.19, 0.0178771081725381),
+   (at "2012-01-27", 0.19, -0.0044530897672834),
+   (at "2012-01-27", 0.19, 0.0125638544546015),
+   (at "2012-01-27", 0.19, 0.0157411263968213),
+   (at "2012-01-27", 0.19, 0.0182904634062437)],
+  BS "SP_500"
+  [(at "2012-01-27", 0.15, 0.0043096808044729),
+   (at "2012-01-27", 0.15, 0.0024263805987983),
+   (at "2012-01-27", 0.15, 0.0094452810918001),
+   (at "2012-01-27", 0.15, 0.0125315353728014),
+   (at "2012-01-27", 0.15, 0.0151125070556484)]
+  ]
+
+exampleCorrs = [Corr ("DJ_Eurostoxx_50", "Nikkei_225") 0.6, 
+                Corr ("DJ_Eurostoxx_50", "SP_500") 0.8, 
+                Corr ("Nikkei_225", "SP_500") 0.6]
+
+exampleDisc = CustomDisc [ (366, 0.9797862861805930), (731, 0.9505748482484491), (1096, 0.9214621679912968)
+                         , (1461, 0.8906693055891434), (1827, 0.8588567633110704)]
+
+-- generate example input data for worstOff LexiFi contract (Medium contract in finpar)
+genExampleData = genAndWriteData exampleDisc exampleModelData exampleMarketData worstOff
+genExamplePayoff = writeOpenCL (ppCLSeq $ genPayoffFunc $ fromManaged worstOff) "MediumContact"
+
 -- usage examples
 -- putStr $ ppCLSeq $ genPayoffFunc ex2 -- pretty-printing in console
 -- writeOpenCL (ppCLSeq $ genPayoffFunc ex2) "SmallContract" -- to generate SmallContract.cl in current directory
+
+main = do 
+  genExampleData
+  genExamplePayoff

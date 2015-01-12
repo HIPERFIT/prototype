@@ -12,6 +12,7 @@ import qualified Data.Vector as V
 
 import CodeGen.BBridgeGen
 import CodeGen.Utils
+import qualified CodeGen.Config as Conf
 import Contract.Date
 import Contract
 import LexifiContracts
@@ -127,8 +128,8 @@ datesForBB sd ds = (firstDate, dates)
 genBBConf numUnder startDate dates = bbridgeConf numUnder $ datesForBB startDate dates 
 
 writeInputData context = do
-    template <- readFile "./proto/CodeGen/InputTemplate.data"
-    writeFile "input.data" (replaceLabels context template)
+    template <- readFile "./proto/templ/InputTemplate.data"
+    writeFile (Conf.genDataPath ++ "input.data") (replaceLabels context template)
 
 genAndWriteData discM modelData marketData contr = 
   do
@@ -139,8 +140,6 @@ genAndWriteData discM modelData marketData contr =
         res = genInput discM modelData marketData sob cm
     writeInputData res
     hClose fh
-
-genExampleData = genAndWriteData exampleDisc exampleModelData exampleMarketData worstOff 
 
 -- Pretty-printing data
 ppModelData (vols, drifts) = inSqBr (sqBrBlock $ intercalate ",\n" (map (ppList . (map ppDouble')) vols)) ++ "\n\n" ++
@@ -161,39 +160,3 @@ ppCorr corrM = inSqBr $ sqBrBlock (intercalate ",\n" $ map (ppList . map (ppDoub
 
 sqBrBlock = inSqBr . surroundBy "\n"
 
-exampleMarketData = (
-  exampleCorrs,
-  [Quotes "DJ_Eurostoxx_50" [(at "2012-01-27", 3758.0500000000001819)],
-   Quotes "Nikkei_225" [(at "2012-01-27", 11840.0)],
-   Quotes "SP_500" [(at "2012-01-27", 1200.0)]]
-  )
-
-exampleUnderlyings = ["DJ_Eurostoxx_50", "Nikkei_225", "SP_500"]
-
-exampleModelData = [
-  BS "DJ_Eurostoxx_50"
-  [(at "2012-01-27", 0.19, -0.0283491736871803),
-   (at "2012-01-27", 0.19, -0.0183841413744211),
-   (at "2012-01-27", 0.19, -0.0172686581005089),
-   (at "2012-01-27", 0.19, -0.0144179417871814),
-   (at "2012-01-27", 0.19, -0.0121497422218761)],
-  BS "Nikkei_225"
-  [(at "2012-01-27", 0.19, 0.0178771081725381),
-   (at "2012-01-27", 0.19, -0.0044530897672834),
-   (at "2012-01-27", 0.19, 0.0125638544546015),
-   (at "2012-01-27", 0.19, 0.0157411263968213),
-   (at "2012-01-27", 0.19, 0.0182904634062437)],
-  BS "SP_500"
-  [(at "2012-01-27", 0.15, 0.0043096808044729),
-   (at "2012-01-27", 0.15, 0.0024263805987983),
-   (at "2012-01-27", 0.15, 0.0094452810918001),
-   (at "2012-01-27", 0.15, 0.0125315353728014),
-   (at "2012-01-27", 0.15, 0.0151125070556484)]
-  ]
-
-exampleCorrs = [Corr ("DJ_Eurostoxx_50", "Nikkei_225") 0.6, 
-                Corr ("DJ_Eurostoxx_50", "SP_500") 0.8, 
-                Corr ("Nikkei_225", "SP_500") 0.6]
-
-exampleDisc = CustomDisc [ (366, 0.9797862861805930), (731, 0.9505748482484491), (1096, 0.9214621679912968)
-                         , (1461, 0.8906693055891434), (1827, 0.8588567633110704)]
