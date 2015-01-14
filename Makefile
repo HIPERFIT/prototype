@@ -1,4 +1,3 @@
-OPTIMIZATION=-O2 -msse2 -rtsopts
 EXECUTABLE=./dist/build/examples/examples
 GENERIC_PRICING=./finpar/GenericPricing
 PRICING_ENGINE=$(GENERIC_PRICING)/CppOpenCL
@@ -13,9 +12,7 @@ copy_generated:
 	cp ./generated/input.data $(PRICING_ENGINE_DATA)/Medium/input.data
 
 run_pricing:
-	$(MAKE) -C $(PRICING_ENGINE) clean
-	$(MAKE) -C $(PRICING_ENGINE) gpu
-	$(MAKE) -C $(PRICING_ENGINE) run_medium
+	$(MAKE) -C $(PRICING_ENGINE) clean && $(MAKE) -C $(PRICING_ENGINE) gpu && $(MAKE) -C $(PRICING_ENGINE) run_medium
 
 generate:
 	$(EXECUTABLE)

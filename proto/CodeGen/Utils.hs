@@ -1,8 +1,10 @@
 {-# LANGUAGE GADTs #-}
 module CodeGen.Utils where
 
+import qualified Data.Text as T
 import Data.List
 import Data.List.Split
+import Text.Regex.Posix
 import Contract.Expr
 import Contract.Type
 import Contract
@@ -78,3 +80,9 @@ inBlock = newLn . inCurlBr . newLn
 commaSeparated = intercalate ", "
 surroundBy c s = c ++ s ++ c
 spaced = surroundBy " "
+
+-- parsing output
+
+parseOut :: String -> [Double]
+parseOut s = map (read . T.unpack . T.strip) $ T.splitOn (T.pack ",") $ T.pack listStr
+  where (_,_,_,[listStr]) = s =~ "\\[(.*?)\\]" :: (String, String, String, [String])
