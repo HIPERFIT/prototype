@@ -85,4 +85,4 @@ spaced = surroundBy " "
 
 parseOut :: String -> [Double]
 parseOut s = map (read . T.unpack . T.strip) $ T.splitOn (T.pack ",") $ T.pack listStr
-  where (_,_,_,[listStr]) = s =~ "\\[(.*?)\\]" :: (String, String, String, [String])
+  where (_,_,_,[listStr]) = s =~ "\\s+\\[(.*?)\\]" :: (String, String, String, [String])

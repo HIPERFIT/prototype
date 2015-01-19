@@ -12,12 +12,13 @@ import qualified Data.Vector as V
 
 import CodeGen.BBridgeGen
 import CodeGen.Utils
-import qualified CodeGen.Config as Conf
+import qualified Config as Conf
 import Contract.Date
 import Contract
 import LexifiContracts
 
 type MarketData = ([Corr], [Quotes])
+type SobolDirVects = [String]
 
 data Corr = Corr (String, String) Double
           deriving Show
@@ -39,7 +40,7 @@ data ContractMeta = CM
      }
      deriving Show
 
-genInput :: DiscModel -> [Model] -> MarketData -> [String] -> ContractMeta -> [(String,String)]
+genInput :: DiscModel -> [Model] -> MarketData -> SobolDirVects -> ContractMeta -> [(String,String)]
 genInput discM ms md@(corr, quotes) sob cMeta = context
   where
     numDates = length $ allDates cMeta

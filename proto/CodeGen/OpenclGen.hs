@@ -16,7 +16,7 @@ import Contract.Date
 import Contract.Type
 import Contract.Transform
 import CodeGen.Utils
-import qualified CodeGen.Config as Conf
+import qualified Config as Conf
 
 
 -- data type representing AST of some simple imperative language
