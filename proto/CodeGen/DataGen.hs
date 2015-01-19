@@ -28,6 +28,8 @@ data Quotes = Quotes String [(Date, Double)]
 data Model = BS String [(Date, Double, Double)]
            deriving Show
 
+type ModelData = [Model]
+
 data DiscModel = ConstDisc Double 
                | CustomDisc [(Int,Double)]
 
@@ -40,7 +42,7 @@ data ContractMeta = CM
      }
      deriving Show
 
-genInput :: DiscModel -> [Model] -> MarketData -> SobolDirVects -> ContractMeta -> [(String,String)]
+genInput :: DiscModel -> ModelData -> MarketData -> SobolDirVects -> ContractMeta -> [(String,String)]
 genInput discM ms md@(corr, quotes) sob cMeta = context
   where
     numDates = length $ allDates cMeta

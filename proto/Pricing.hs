@@ -9,7 +9,7 @@ import Contract
 import System.Directory
 import System.Process
 
-runPricing ::  DiscModel -> [Model] -> MarketData ->  MContract -> IO [Double]
+runPricing ::  DiscModel -> ModelData -> MarketData -> MContract -> IO [Double]
 runPricing discM ms md@(corr, quotes) mContr = 
     do
       genAndWriteData discM ms md mContr
