@@ -42,29 +42,33 @@ data ContractMeta = CM
      }
      deriving Show
 
-genInput :: DiscModel -> ModelData -> MarketData -> SobolDirVects -> ContractMeta -> [(String,String)]
-genInput discM ms md@(corr, quotes) sob cMeta = context
+genInput :: [(DiscModel, ModelData, MarketData)] -> SobolDirVects -> ContractMeta -> [(String,String)]
+genInput ds sob cMeta = context
   where
+    (discMs, ms, mds) = unzip3 ds
+    (sourceCorrs, quotes) = unzip mds
     numDates = length $ allDates cMeta
     numUnder = length $ underlyings cMeta
-    summary = genSummary numDates numUnder
-    discs = [map (discount discM) $ map (dateDiff (startDate cMeta)) (transfDates cMeta)]
+    numMods = length ds
+    summary = genSummary numMods numDates numUnder
+    dayOffsets = map (dateDiff (startDate cMeta)) (transfDates cMeta)
+    discounts discM = map (discount discM) dayOffsets
+    discs = map discounts discMs
     bbMeta = ppBBMeta $ genBBConf numUnder (startDate cMeta) (allDates cMeta)
-    modelData = ppModelData $ prepareModelData ms
-    stPrice = show $ [startPrice quotes (startDate cMeta)]
-    corrs = ppCorr $ cholesky $ corrMatr corr (underlyings cMeta)
+    modelData = ppModelData $ unzip $ map prepareModelData ms
+    stPrice = show $ map (startPrice (startDate cMeta)) quotes
+    corrs = ppCorrs $ map (cholesky . (corrMatr (underlyings cMeta))) sourceCorrs
     context = [("SUMMARY", summary), ("DIRVECT", ppDirVects sob),
                ("CORR", corrs), ("MODELDATA", modelData), ("STARTPRICE", stPrice),
-               ("DETVALS", inSqBr $ inSqBr "  "), ("DISCOUNTS", show discs), ("BBMETA", bbMeta)]
+               ("DETVALS", inSqBr $ commaSeparated $ replicate numMods "[]"), ("DISCOUNTS", show discs), ("BBMETA", bbMeta)]
 
-genSummary numDates numUnder = intercalate "\n" $
+genSummary numMods numDates numUnder = intercalate "\n" $
                                map show [contrNum, monteCarloIter, numDates,
-                                         numUnder, numberOfModels, sobolBitLength] 
+                                         numUnder, numMods, sobolBitLength] 
   where
     -- some magic numbers from Medium data.
     contrNum = 2
     monteCarloIter = 1048576
-    numberOfModels = 1
     sobolBitLength = 30
 
 extractMeta mc@(d,c) = CM { underlyings = observables c
@@ -77,7 +81,7 @@ extractMeta mc@(d,c) = CM { underlyings = observables c
     tDates = mTransfDates mc
     dates = nub $ sort $ oDates ++ tDates
 
-corrMatr cs us = (M.matrix size corrMatr) + M.ident size
+corrMatr us cs = (M.matrix size corrMatr) + M.ident size
   where
     size = length us
     source = cs ++ map permute cs
@@ -105,7 +109,7 @@ prepareModelData md = (vols, drifts)
     f (BS _ xs) = case (unzip3 xs) of
                   (_, vols, drifts) -> (vols, drifts)
 
-startPrice qs date = map (getPrice date) $ sortBy (comparing (\(Quotes n _) -> n)) qs
+startPrice date qs = map (getPrice date) $ sortBy (comparing (\(Quotes n _) -> n)) qs
 
 
 getPrice date (Quotes _ qs) = case (find ((== date) . fst) qs) of
@@ -134,20 +138,20 @@ writeInputData context = do
     template <- readFile "./proto/templ/InputTemplate.data"
     writeFile (Conf.genDataPath ++ "input.data") (replaceLabels context template)
 
-genAndWriteData discM modelData marketData contr = 
+genAndWriteData ds contr = 
   do
     fh <- openFile "./proto/CodeGen/sobol_vect.data" ReadMode
     vects <- hGetContents fh
     let cm = extractMeta contr
         sob = take ((length $ underlyings cm) * (length $ allDates cm)) (lines vects)
-        res = genInput discM modelData marketData sob cm
+        res = genInput ds sob cm
     writeInputData res
     hClose fh
 
 -- Pretty-printing data
-ppModelData (vols, drifts) = inSqBr (sqBrBlock $ intercalate ",\n" (map (ppList . (map ppDouble')) vols)) ++ "\n\n" ++
-                             inSqBr (sqBrBlock $ intercalate ",\n" (map (ppList . (map ppDouble')) drifts))
-
+ppModelData (vols, drifts) = (sqBrBlock $ intercalate ",\n" $ map ppRows vols) ++ "\n\n" ++ 
+                             (sqBrBlock $ intercalate ",\n" $ map ppRows drifts)
+ppRows = sqBrBlock . (intercalate ",\n") . (map (ppList . (map ppDouble')))
 ppList = inSqBr . commaSeparated 
 
 ppDouble p d = showFFloat (Just p) d ""
@@ -159,7 +163,8 @@ ppDirVects vs = sqBrBlock $ intercalate ",\n" (map inSqBr vs)
 ppBBMeta bbMeta = sqBrBlock (intercalate ",\n" (map (show . V.toList) [bb_bi bbMeta, bb_li bbMeta, bb_ri bbMeta])) ++ "\n\n"
                   ++ sqBrBlock (intercalate ",\n" (map (show . V.toList) [bb_sd bbMeta, bb_lw bbMeta, bb_rw bbMeta]))
 
-ppCorr corrM = inSqBr $ sqBrBlock (intercalate ",\n" $ map (ppList . map (ppDouble 7)) $ M.toLists corrM)
+ppCorr corrM = inSqBr $ intercalate ",\n" $ map (ppList . map (ppDouble 7)) $ M.toLists corrM
+ppCorrs cs = sqBrBlock $ intercalate ",\n" $ map ppCorr cs
 
 sqBrBlock = inSqBr . surroundBy "\n"
 

@@ -102,6 +102,7 @@ origResult = "[ 937.3915829436 ]"
 
 -- calculate price for worstOff LexiFi contract (Medium contract in finpar)
 main = do
-  prices <- runPricing exampleDisc exampleModelData exampleMarketData worstOff
+  prices <- runPricing [--(exampleDisc, exampleModelData, exampleMarketData), 
+                        (exampleDisc, exampleModelData, exampleMarketData)] worstOff
   putStrLn $ "Calculated prices: " ++ show prices
   putStrLn $ "Original price (from benchmark): " ++ origResult

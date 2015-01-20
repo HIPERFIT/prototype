@@ -9,10 +9,10 @@ import Contract
 import System.Directory
 import System.Process
 
-runPricing ::  DiscModel -> ModelData -> MarketData -> MContract -> IO [Double]
-runPricing discM ms md@(corr, quotes) mContr = 
+runPricing :: [(DiscModel, ModelData, MarketData)] -> MContract -> IO [Double]
+runPricing ds mContr = 
     do
-      genAndWriteData discM ms md mContr
+      genAndWriteData ds  mContr
       writeOpenCL (ppCLSeq $ genPayoffFunc $ fromManaged mContr) "MediumContract"
       copyDataAndCode "input.data" "MediumContract.cl"
       recompileBenchmark
