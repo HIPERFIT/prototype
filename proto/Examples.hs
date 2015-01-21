@@ -66,6 +66,8 @@ exampleMarketData = (
 
 exampleUnderlyings = ["DJ_Eurostoxx_50", "Nikkei_225", "SP_500"]
 
+-- we are not using date information for now
+-- that's why we can use arbitrary dates in model data
 exampleModelData = [
   BS "DJ_Eurostoxx_50"
   [(at "2012-01-27", 0.19, -0.0283491736871803),

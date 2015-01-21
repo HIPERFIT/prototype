@@ -60,15 +60,15 @@ genInput ds sob cMeta = context
     corrs = ppCorrs $ map (cholesky . (corrMatr (underlyings cMeta))) sourceCorrs
     context = [("SUMMARY", summary), ("DIRVECT", ppDirVects sob),
                ("CORR", corrs), ("MODELDATA", modelData), ("STARTPRICE", stPrice),
-               ("DETVALS", inSqBr $ commaSeparated $ replicate numMods "[]"), ("DISCOUNTS", show discs), ("BBMETA", bbMeta)]
+               ("DETVALS", inSqBr $ commaSeparated $ replicate numMods "[]"), 
+               ("DISCOUNTS", show discs), ("BBMETA", bbMeta)]
 
-genSummary numMods numDates numUnder = intercalate "\n" $
-                               map show [contrNum, monteCarloIter, numDates,
-                                         numUnder, numMods, sobolBitLength] 
+genSummary numMods numDates numUnder = 
+    intercalate "\n" $ map show [contrNum, monteCarloIter, numDates, numUnder, numMods, sobolBitLength] 
   where
     -- some magic numbers from Medium data.
     contrNum = 2
-    monteCarloIter = 1048576
+    monteCarloIter = 1048576 -- TODO provide heuristic to select number of iterations
     sobolBitLength = 30
 
 extractMeta mc@(d,c) = CM { underlyings = observables c
@@ -120,10 +120,9 @@ discount :: DiscModel -> Int -> Double
 discount (ConstDisc r) t = exp (-r * yearFraction)
          where
            yearFraction = fromIntegral t / 365
-
 discount (CustomDisc xs) t = (Map.fromList xs) Map.! t
 
-y1980 = at "1980-01-01"
+y1980 = read "1980-01-01"
 toMinutesFrom1980 :: Date -> Double 
 toMinutesFrom1980 d = fromIntegral $ (dateDiff y1980 d) * 24 * 60
 

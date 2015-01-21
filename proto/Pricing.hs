@@ -12,7 +12,7 @@ import System.Process
 runPricing :: [(DiscModel, ModelData, MarketData)] -> MContract -> IO [Double]
 runPricing ds mContr = 
     do
-      genAndWriteData ds  mContr
+      genAndWriteData ds mContr
       writeOpenCL (ppCLSeq $ genPayoffFunc $ fromManaged mContr) "MediumContract"
       copyDataAndCode "input.data" "MediumContract.cl"
       recompileBenchmark
