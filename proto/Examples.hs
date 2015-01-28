@@ -96,7 +96,7 @@ exampleCorrs = [Corr ("DJ_Eurostoxx_50", "Nikkei_225") 0.6,
 exampleDisc = CustomDisc [ (366, 0.9797862861805930), (731, 0.9505748482484491), (1096, 0.9214621679912968)
                          , (1461, 0.8906693055891434), (1827, 0.8588567633110704)]
 
-origResult = "[ 937.3915829436 ]"
+origResult = "[937.3915829436]"
 
 -- usage examples
 -- putStr $ ppCLSeq $ genPayoffFunc ex2 -- pretty-printing in console
@@ -106,5 +106,5 @@ origResult = "[ 937.3915829436 ]"
 main = do
   prices <- runPricing [--(exampleDisc, exampleModelData, exampleMarketData), 
                         (exampleDisc, exampleModelData, exampleMarketData)] worstOff
-  putStrLn $ "Calculated prices: " ++ show prices
-  putStrLn $ "Original price (from benchmark): " ++ origResult
+  putStrLn $ "Calculated price: " ++ show prices
+  putStrLn $ "Actual price:     " ++ origResult

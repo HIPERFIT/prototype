@@ -118,4 +118,9 @@ ppCLCode (Var v) = v
 writeOpenCL p fileName=
   do
     template <- readFile "proto/templ/ContractTemplate.cl"
-    writeFile (Conf.genCodePath ++ fileName ++ ".cl") (replaceLabel "CODE" p template)
+    writeFile (Conf.genCodePath ++ fileName) (replaceLabel "CODE" p template)
+
+renderOpenCL p =
+  do
+    template <- readFile "proto/templ/KernelTemplate.cl"
+    return (replaceLabel "CODE" p template)

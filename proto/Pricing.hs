@@ -1,29 +1,41 @@
-module Pricing where
+module Pricing (runPricing) where
 
 import CodeGen.OpenclGen
 import CodeGen.Utils
 import CodeGen.DataGen
 import qualified Config as Conf
 import Contract
+import ProcessUtils
 
 import System.Directory
 import System.Process
 
+payoffSource = "MediumContract.cl"
+refPrices = "\n[0.0]" -- fake reference prices
+
 runPricing :: [(DiscModel, ModelData, MarketData)] -> MContract -> IO [Double]
 runPricing ds mContr = 
     do
-      genAndWriteData ds mContr
-      writeOpenCL (ppCLSeq $ genPayoffFunc $ fromManaged mContr) "MediumContract"
-      copyDataAndCode "input.data" "MediumContract.cl"
+      inputData <- generateData ds mContr
+      writeOpenCL (ppCLSeq $ genPayoffFunc $ fromManaged mContr) payoffSource
+      copyFile (Conf.genCodePath ++ payoffSource) (Conf.pricerCodePath ++ payoffSource)
       recompileBenchmark
-      a <- readProcess "make" ["-C", Conf.pricingEnginePath, "run_medium"] []
-      return $ parseOut a
+      a <- readProcessWorkDir Conf.pricingEnginePath "./GenPricing" [] $ inputData ++ refPrices
+      return $ parseOut a      
 
-copyDataAndCode dataFile sourceFile = 
-    do
-      copyFile (Conf.genDataPath ++ dataFile) (Conf.pricerDataPath ++ dataFile)
-      copyFile (Conf.genCodePath ++ sourceFile) (Conf.pricerCodePath ++ sourceFile)
-
+-- TODO: looks like full recompilation not needed.
 recompileBenchmark = do
-  res <- readProcess "make"  ["-C",  Conf.pricingEnginePath, "clean", "gpu"] []
-  putStrLn res
+  readProcess "make" ["-C",  Conf.pricingEnginePath, "clean", "gpu"] []
+
+-- Alternative implementation where all input (including payoff function code)
+-- is provided in stdin. Works only with special support from finpar workbench.
+-- Left as experimental implementation.
+_runPricingAlt ds mContr = do 
+  inputData <- generateData ds mContr
+  putStrLn inputData
+  kernelSource <- 
+      do 
+        template <- readFile "proto/templ/KernelTemplate.cl"
+        return $ replaceLabel "CODE" (ppCLSeq $ genPayoffFunc $ fromManaged mContr) template
+  putStrLn kernelSource
+  return $ readProcessWorkDir Conf.pricingEnginePath "./GenPricing" [] (kernelSource ++ inputData ++ " [ 0.0 ]\n")

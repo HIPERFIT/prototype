@@ -1,12 +1,14 @@
 module SmallContract where
 
 import Contract
-import LexifiContracts
 import CodeGen.OpenclGen
 import CodeGen.DataGen
 import CodeGen.Utils
 import Pricing
 import Contract.Date
+import System.Process
+import System.Directory
+import qualified Config as Conf
 
 -- this contract corresponds to the small contract in finpar 
 european =
@@ -43,6 +45,6 @@ exampleDisc = ConstDisc 0.0200823
 
 main = do
   prices <- runPricing [--(exampleDisc, exampleModelData, exampleMarketData), 
-                        (exampleDisc, exampleModelData, exampleMarketData)] mEx2
+                        (exampleDisc, exampleModelData, exampleMarketData)] mEuropean
   putStrLn $ "Calculated prices: " ++ show prices
 

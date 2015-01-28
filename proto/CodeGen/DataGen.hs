@@ -147,6 +147,16 @@ genAndWriteData ds contr =
     writeInputData res
     hClose fh
 
+generateData ds contr = 
+  do
+    vects <- readFile "./proto/CodeGen/sobol_vect.data"
+    let cm = extractMeta contr
+        sob = take ((length $ underlyings cm) * (length $ allDates cm)) (lines vects)
+        context = genInput ds sob cm
+    template <- readFile "./proto/templ/InputTemplate.data"
+    return (replaceLabels context template)
+
+
 -- Pretty-printing data
 ppModelData (vols, drifts) = (sqBrBlock $ intercalate ",\n" $ map ppRows vols) ++ "\n\n" ++ 
                              (sqBrBlock $ intercalate ",\n" $ map ppRows drifts)
