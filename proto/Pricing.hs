@@ -13,25 +13,25 @@ import System.Process
 payoffSource = "MediumContract.cl"
 refPrices = "\n[0.0]" -- fake reference prices
 
-runPricing :: [(DiscModel, ModelData, MarketData)] -> MContract -> IO [Double]
-runPricing ds mContr = 
+runPricing :: DataConf -> [(DiscModel, ModelData, MarketData)] -> MContract -> IO [Double]
+runPricing dConf ds mContr = 
     do
-      inputData <- generateData ds mContr
+      inputData <- generateData dConf ds mContr
       writeOpenCL (ppCLSeq $ genPayoffFunc $ fromManaged mContr) payoffSource
       copyFile (Conf.genCodePath ++ payoffSource) (Conf.pricerCodePath ++ payoffSource)
-      recompileBenchmark
+      cleanOpenCL
       a <- readProcessWorkDir Conf.pricingEnginePath "./GenPricing" [] $ inputData ++ refPrices
       return $ parseOut a      
 
--- TODO: looks like full recompilation not needed.
-recompileBenchmark = do
-  readProcess "make" ["-C",  Conf.pricingEnginePath, "clean", "gpu"] []
+-- deleting compiled and cached OpenCL files
+cleanOpenCL = do
+  readProcess "make" ["clean_opencl"] []
 
 -- Alternative implementation where all input (including payoff function code)
 -- is provided in stdin. Works only with special support from finpar workbench.
 -- Left as experimental implementation.
-_runPricingAlt ds mContr = do 
-  inputData <- generateData ds mContr
+_runPricingAlt dConf ds mContr = do 
+  inputData <- generateData dConf ds mContr
   putStrLn inputData
   kernelSource <- 
       do 

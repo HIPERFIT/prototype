@@ -12,3 +12,6 @@ run_examples:
 
 run_test: build_examples run_examples
 
+clean_opencl:
+	rm -f ./finpar/GenericPricing/CppOpenCL/*.ptx
+	rm -rf $(HOME)/.nv/ComputeCache/*

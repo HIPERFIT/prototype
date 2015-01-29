@@ -34,23 +34,25 @@ data DiscModel = ConstDisc Double
                | CustomDisc [(Int,Double)]
 
 data ContractMeta = CM
-     { underlyings :: [String]
-     , startDate   :: Date 
-     , obsDates    :: [Date]
-     , transfDates :: [Date]
-     , allDates    :: [Date] -- observable & transfer dates
-     }
-     deriving Show
+    { underlyings :: [String]
+    , startDate   :: Date 
+    , obsDates    :: [Date]
+    , transfDates :: [Date]
+    , allDates    :: [Date] -- observable & transfer dates
+    }
+                    deriving Show
 
-genInput :: [(DiscModel, ModelData, MarketData)] -> SobolDirVects -> ContractMeta -> [(String,String)]
-genInput ds sob cMeta = context
+data DataConf  = DataConf { monteCarloIter :: Int }
+
+genInput :: DataConf -> [(DiscModel, ModelData, MarketData)] -> SobolDirVects -> ContractMeta -> [(String,String)]
+genInput dConf ds sob cMeta = context
   where
     (discMs, ms, mds) = unzip3 ds
     (sourceCorrs, quotes) = unzip mds
     numDates = length $ allDates cMeta
     numUnder = length $ underlyings cMeta
     numMods = length ds
-    summary = genSummary numMods numDates numUnder
+    summary = genSummary (monteCarloIter dConf) numMods numDates numUnder
     dayOffsets = map (dateDiff (startDate cMeta)) (transfDates cMeta)
     discounts discM = map (discount discM) dayOffsets
     discs = map discounts discMs
@@ -63,12 +65,12 @@ genInput ds sob cMeta = context
                ("DETVALS", inSqBr $ commaSeparated $ replicate numMods "[]"), 
                ("DISCOUNTS", show discs), ("BBMETA", bbMeta)]
 
-genSummary numMods numDates numUnder = 
-    intercalate "\n" $ map show [contrNum, monteCarloIter, numDates, numUnder, numMods, sobolBitLength] 
+genSummary mcIter numMods numDates numUnder = 
+    intercalate "\n" $ map show [contrNum, mcIter, numDates, numUnder, numMods, sobolBitLength] 
   where
     -- some magic numbers from Medium data.
     contrNum = 2
-    monteCarloIter = 1048576 -- TODO provide heuristic to select number of iterations
+     -- TODO provide heuristic to select number of iterations
     sobolBitLength = 30
 
 extractMeta mc@(d,c) = CM { underlyings = observables c
@@ -133,26 +135,12 @@ datesForBB sd ds = (firstDate, dates)
 
 genBBConf numUnder startDate dates = bbridgeConf numUnder $ datesForBB startDate dates 
 
-writeInputData context = do
-    template <- readFile "./proto/templ/InputTemplate.data"
-    writeFile (Conf.genDataPath ++ "input.data") (replaceLabels context template)
-
-genAndWriteData ds contr = 
-  do
-    fh <- openFile "./proto/CodeGen/sobol_vect.data" ReadMode
-    vects <- hGetContents fh
-    let cm = extractMeta contr
-        sob = take ((length $ underlyings cm) * (length $ allDates cm)) (lines vects)
-        res = genInput ds sob cm
-    writeInputData res
-    hClose fh
-
-generateData ds contr = 
+generateData dConf ds contr = 
   do
     vects <- readFile "./proto/CodeGen/sobol_vect.data"
     let cm = extractMeta contr
         sob = take ((length $ underlyings cm) * (length $ allDates cm)) (lines vects)
-        context = genInput ds sob cm
+        context = genInput dConf ds sob cm
     template <- readFile "./proto/templ/InputTemplate.data"
     return (replaceLabels context template)
 
