@@ -104,7 +104,7 @@ origResult = "[937.3915829436]"
 
 -- calculate price for worstOff LexiFi contract (Medium contract in finpar)
 main = do
-  prices <- runPricing [--(exampleDisc, exampleModelData, exampleMarketData), 
+  prices <- runPricing (DataConf {monteCarloIter=1048576}) [--(exampleDisc, exampleModelData, exampleMarketData), 
                         (exampleDisc, exampleModelData, exampleMarketData)] worstOff
   putStrLn $ "Calculated price: " ++ show prices
   putStrLn $ "Actual price:     " ++ origResult
