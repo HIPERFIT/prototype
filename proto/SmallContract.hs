@@ -44,7 +44,7 @@ exampleCorrs = []
 exampleDisc = ConstDisc 0.0200823
 
 main = do
-  prices <- runPricing [--(exampleDisc, exampleModelData, exampleMarketData), 
-                        (exampleDisc, exampleModelData, exampleMarketData)] mEuropean
+  prices <- runPricing (DataConf {monteCarloIter=1048576})  
+                       [(exampleDisc, exampleModelData, exampleMarketData)] mEuropean
   putStrLn $ "Calculated prices: " ++ show prices
 

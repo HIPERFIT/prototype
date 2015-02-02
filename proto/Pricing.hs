@@ -20,6 +20,7 @@ runPricing dConf ds mContr =
       writeOpenCL (ppCLSeq $ genPayoffFunc $ fromManaged mContr) payoffSource
       copyFile (Conf.genCodePath ++ payoffSource) (Conf.pricerCodePath ++ payoffSource)
       cleanOpenCL
+      --putStrLn inputData
       a <- readProcessWorkDir Conf.pricingEnginePath "./GenPricing" [] $ inputData ++ refPrices
       return $ parseOut a      
 
