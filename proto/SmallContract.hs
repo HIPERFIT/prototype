@@ -12,13 +12,13 @@ import qualified Config as Conf
 
 -- this contract corresponds to the small contract in finpar 
 european =
-    let strike = 4000.0
+    let strike = r 4000
         theobs = obs ("Carlsberg",0)
+        maturity = 357
     in scale (r 0.9997817434496459)
-             (transl 357
-                    (iff (r strike !<! theobs)
-                          (scale (theobs - r strike)
-                                 (transfOne EUR "you" "me"))
+             (transl maturity
+                    (iff (strike !<! theobs)
+                         (scale (theobs - strike) (transfOne EUR "you" "me"))
                          zero))
 
 mEuropean = (at "2014-01-01", european)

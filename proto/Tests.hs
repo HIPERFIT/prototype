@@ -160,6 +160,6 @@ testPricing (name, inputData, mContr, refPrice) =
       putStrLn $ "Actual price:     " ++ show refPrice
       putStrLn $ "Diff:             " ++ show (refPrice - price)
 
-printCode c =  putStr $ ppCLSeq $ genPayoffFunc c
+printCode  =  putStr . ppCLSeq . genPayoffFunc
       
 main = mapM_ testPricing tests 
