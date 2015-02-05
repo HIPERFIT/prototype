@@ -241,6 +241,8 @@ mEx7a = (read "2008-09-01", ex7a)
          d = (rd - rf - (sigma^2)/2) * t
    
    For discounting of calculated price we use domestic rate rd.
+   See: Andreas Weber and Uwe Wystup. Pricing Formulae for Foreign Exchange Options.
+        http://www.researchgate.net/publication/228007079_Pricing_Formulae_for_Foreign_Exchange_Options
 -}
 ex7aData :: [(DiscModel, ModelData, MarketData)]
 ex7aData = [(ConstDisc (0.05),
