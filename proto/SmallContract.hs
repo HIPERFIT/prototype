@@ -1,4 +1,5 @@
-module SmallContract where
+-- Example contract and input similar to SmallContract in finpar
+module SmallContract  where
 
 import Contract
 import CodeGen.OpenclGen
@@ -21,30 +22,18 @@ european =
                          (scale (theobs - strike) (transfOne EUR "you" "me"))
                          zero))
 
-mEuropean = (at "2014-01-01", european)
+mEuropean = (at "2011-12-09", european)
 
-exampleUnderlyings = ["Carlsberg"]
+inputData :: [(DiscModel, ModelData, MarketData)]
+inputData = [(ConstDisc 0.0200823,
+             [BS "DJ_Eurostoxx_50" [(read "2011-12-09", 0.19, -0.0276481070940405)]],
+             ([], [Quotes "DJ_Eurostoxx_50" [(read "2011-12-09", 3758.05)]]))
+           ]
 
--- Example data for pricing engine (similar to Medium contract in finpar)
-exampleMarketData = (
-  exampleCorrs,
-  [Quotes "Carlsberg" [(at "2014-01-01", 3758.05)]]
-  )
-
-
--- we are not using date information for now
--- that's why we can use arbitrary dates in model data
-exampleModelData = [
-  BS "Carlsberg"
-  [(at "2014-01-01", 0.19, -0.0276481070940405)]
-  ]
-
-exampleCorrs = []
-
-exampleDisc = ConstDisc 0.0200823
+refPrice = 167.055714
 
 main = do
-  prices <- runPricing (DataConf {monteCarloIter=1048576})  
-                       [(exampleDisc, exampleModelData, exampleMarketData)] mEuropean
-  putStrLn $ "Calculated prices: " ++ show prices
+  [price] <- runPricing (DataConf {monteCarloIter=1048576}) inputData mEuropean
+  putStrLn $ "Calculated price: " ++ show price
+  putStrLn $ "Actual price    : " ++ show refPrice
 
