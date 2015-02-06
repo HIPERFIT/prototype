@@ -4,6 +4,9 @@ PRICING_ENGINE=$(GENERIC_PRICING)/CppOpenCL
 PRICING_ENGINE_CODE=$(PRICING_ENGINE)/ContractDefs
 PRICING_ENGINE_DATA=$(GENERIC_PRICING)/Data
 
+compile_opencl:
+	make -C $(PRICING_ENGINE) clean gpu
+
 build_examples: 
 	cabal build tests
 
