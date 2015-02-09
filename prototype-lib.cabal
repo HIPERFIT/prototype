@@ -19,7 +19,8 @@ library
   exposed-modules:     CodeGen.DataGen, CodeGen.BBridgeGen, Tests, CodeGen.Utils, CodeGen.OpenclGen, CodeGen.Syntax
   -- other-modules:       
   other-extensions:    DataKinds, GADTs
-  build-depends:       base >=4.6
+  build-depends:       HUnit >= 1.2.5.2
+                     , base >=4.6
                      , containers >=0.5
                      , deepseq >= 1.3.0.1
                      , directory >= 1.2.0.1
@@ -36,7 +37,8 @@ library
 
 executable             tests
   main-is:             Tests.hs
-  build-depends:       base >=4.6
+  build-depends:       HUnit >= 1.2.5.2
+                     , base >=4.6
                      , containers >=0.5
                      , deepseq >= 1.3.0.1
                      , directory >= 1.2.0.1

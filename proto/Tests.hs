@@ -13,6 +13,8 @@ import qualified MediumContract as MediumC
 
 import System.Process
 import System.Directory
+import Test.HUnit
+import System.IO (stderr, hPutStr)
 
 {-
 Ex 1a: Equity Call Option (no settlement period, no dividend)
@@ -253,7 +255,7 @@ ex7aData = [(ConstDisc (0.05),
 ex7aPrice = 0.016941999
 
 
-tests =
+testData =
     [("Ex1a", ex1aData, mEx1a, ex1aPrice),
      ("Ex2a", ex2aData, mEx2a, ex2aPrice),
      --("Ex4a", ex2aData, mEx4a, ex4aPrice),
@@ -266,14 +268,49 @@ tests =
 
 dataConf = DataConf {monteCarloIter = 4000000}
 
-testPricing (name, inputData, mContr, refPrice) = 
-    do
-      [price] <- runPricing dataConf inputData mContr
-      putStrLn $ "---- " ++ name ++ " ----"
-      putStrLn $ "Calculated price: " ++ show price
-      putStrLn $ "Actual price:     " ++ show refPrice
-      putStrLn $ "Error:            " ++ (ppDouble 5 ((refPrice - price) * 100 / refPrice)) ++ "%"
+relError v refV = (abs (refV - v)) / refV
+
+eqUptoEps a b eps = (relError a b) <= eps
+
+eps = 0.0005 -- acceptable level of error
+
+hUnitTestPricing (inputData, mContr, refPrice) isVerbose = 
+    TestCase (
+              do 
+                [price] <- runPricing dataConf inputData mContr
+                assertBool ("Error is more than " ++ (ppDouble 3 (eps * 100)) ++ "%")
+                           (eqUptoEps price refPrice eps)
+                if isVerbose then (verboseOut price) else putStr ""
+             )
+    where
+      verboseOut price= do
+        putStrLn $ "Calculated price: " ++ show price
+        putStrLn $ "Actual price:     " ++ show refPrice
+        putStrLn $ "Error:            " ++ (ppDouble 5 ((relError price refPrice) * 100) ++ "%")
+        putStrLn ""
 
 printCode  =  putStr . ppCLSeq . genPayoffFunc
-      
-main = mapM_ testPricing tests 
+
+mkTest (name, inputData, mContr, refPrice) = TestLabel name $ 
+                                             hUnitTestPricing (inputData, mContr, refPrice) True
+
+tests = TestList $ map mkTest testData
+
+-- modified version of original runTestText from HUnit: prints test labels for every test.
+runTestText' :: PutText st -> Test -> IO (Counts, st)
+runTestText' (PutText put us0) t = do
+  (counts', us1) <- performTest reportStart reportError reportFailure us0 t
+  us2 <- put (showCounts counts') True us1
+  return (counts', us2)
+ where
+  reportStart ss us = put ("Running " ++ showPath (path ss)) True us
+  reportError   = reportProblem "Error:"   "Error in:   "
+  reportFailure = reportProblem "Failure:" "Failure in: "
+  reportProblem p0 p1 msg ss us = put line True us
+   where line  = "### " ++ kind ++ path' ++ '\n' : msg
+         kind  = if null path' then p0 else p1
+         path' = showPath (path ss)
+
+runTests = runTestText' (putTextToHandle stderr False) tests
+
+main = runTests
