@@ -11,8 +11,6 @@ import qualified Config as Conf
 import qualified SmallContract as SmallC
 import qualified MediumContract as MediumC
 
-import System.Process
-import System.Directory
 import Test.HUnit
 import System.IO (stderr, hPutStr)
 

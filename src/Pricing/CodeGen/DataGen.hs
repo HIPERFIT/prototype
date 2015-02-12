@@ -137,11 +137,11 @@ genBBConf numUnder startDate dates = bbridgeConf numUnder $ datesForBB startDate
 
 generateData dConf ds contr = 
   do
-    vects <- readFile "./proto/CodeGen/sobol_vect.data"
+    vects <- readFile "./src/Pricing/CodeGen/sobol_vect.data"
     let cm = extractMeta contr
         sob = take ((length $ underlyings cm) * (length $ allDates cm)) (lines vects)
         context = genInput dConf ds sob cm
-    template <- readFile "./proto/templ/InputTemplate.data"
+    template <- readFile "./src/Pricing/templ/InputTemplate.data"
     return (replaceLabels context template)
 
 

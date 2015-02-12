@@ -16,8 +16,8 @@ extra-source-files:  README
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     CodeGen.DataGen, CodeGen.BBridgeGen, Tests, CodeGen.Utils, CodeGen.OpenclGen, CodeGen.Syntax
-  -- other-modules:       
+  exposed-modules:     Contract, Contract.Expr, Contract.Date, Pricing, Config, SmallContract, MediumContract, CodeGen.DataGen, CodeGen.BBridgeGen, CodeGen.Utils, CodeGen.OpenclGen, CodeGen.Syntax
+  other-modules:       LexifiContracts, Contract.FXInstrument, Contract.Environment, Contract.Transform, Contract.Type, Contract.Hash, Contract.Analysis, ProcessUtils
   other-extensions:    DataKinds, GADTs
   build-depends:       HUnit >= 1.2.5.2
                      , base >=4.6
@@ -32,23 +32,14 @@ library
                      , time >=1.4
                      , unix >= 2.6.0.1
                      , vector >=0.10
-  hs-source-dirs:      proto, contracts/Haskell
+  hs-source-dirs:      src/Pricing, contracts/Haskell
   default-language:    Haskell2010
 
 executable             tests
   main-is:             Tests.hs
   build-depends:       HUnit >= 1.2.5.2
                      , base >=4.6
-                     , containers >=0.5
-                     , deepseq >= 1.3.0.1
-                     , directory >= 1.2.0.1
-                     , hmatrix >=0.16
-                     , process >= 1.1.0.2
-                     , regex-posix >= 0.95.2
-                     , split >=0.2
-                     , text >= 0.11.3.1
-                     , time >=1.4
-                     , unix >= 2.6.0.1
-                     , vector >=0.10
-  hs-source-dirs:      proto, contracts/Haskell
+                     , prototype-lib
+  hs-source-dirs:      tests
+  default-language:    Haskell2010
   Ghc-Options:         -main-is Tests
