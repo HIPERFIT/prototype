@@ -19,8 +19,7 @@ library
   exposed-modules:     Contract, Contract.Expr, Contract.Date, Pricing, Config, SmallContract, MediumContract, CodeGen.DataGen, CodeGen.BBridgeGen, CodeGen.Utils, CodeGen.OpenclGen, CodeGen.Syntax
   other-modules:       LexifiContracts, Contract.FXInstrument, Contract.Environment, Contract.Transform, Contract.Type, Contract.Hash, Contract.Analysis, ProcessUtils
   other-extensions:    DataKinds, GADTs
-  build-depends:       HUnit >= 1.2.5.2
-                     , base >=4.6
+  build-depends:       base >=4.6
                      , containers >=0.5
                      , deepseq >= 1.3.0.1
                      , directory >= 1.2.0.1
@@ -43,3 +42,19 @@ executable             tests
   hs-source-dirs:      tests
   default-language:    Haskell2010
   Ghc-Options:         -main-is Tests
+
+executable             web
+  main-is:             Main.hs
+  build-depends:       aeson >= 0.8.0.2
+                     , base >=4.6
+                     , blaze-html
+                     , blaze-markup
+                     , clay
+                     , containers >= 0.5.5.1
+                     , mtl >= 2.2.1
+                     , prototype-lib
+                     , scotty
+                     , text
+  hs-source-dirs:      src/Web
+  default-language:    Haskell2010
+  Ghc-Options:         -main-is Main

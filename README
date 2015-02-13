@@ -17,3 +17,8 @@ After that tests can be run using make:
 make run_test
 ```
 or using main function in Tests.hs.
+
+Emacs Haskell-mode users
+------------------
+
+Use `haskell-session-change-target` command to set proper target: `tests` when running tests/Tests.hs.
