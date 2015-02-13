@@ -1,4 +1,5 @@
-EXECUTABLE=./dist/build/tests/tests
+TESTS=./dist/build/tests/tests
+WEB=./dist/build/web/web
 GENERIC_PRICING=./finpar/GenericPricing
 PRICING_ENGINE=$(GENERIC_PRICING)/CppOpenCL
 PRICING_ENGINE_CODE=$(PRICING_ENGINE)/ContractDefs
@@ -11,10 +12,14 @@ build_examples:
 	cabal build tests
 
 run_examples:
-	$(EXECUTABLE)
+	$(TESTS)
 
 run_test: build_examples run_examples
 
 clean_opencl:
 	rm -f ./finpar/GenericPricing/CppOpenCL/*.ptx
 	rm -rf $(HOME)/.nv/ComputeCache/*
+
+run_web:
+	cabal build web
+	$(WEB)

@@ -18,7 +18,9 @@ make run_test
 ```
 or using main function in Tests.hs.
 
+Use `make run_web` to run web interface. Open `localhost:3000` in browser.
+
 Emacs Haskell-mode users
 ------------------
 
-Use `haskell-session-change-target` command to set proper target: `tests` when running tests/Tests.hs.
+Use `haskell-session-change-target` command to set proper target: `tests` when running tests/Tests.hs and `web` for web interface.

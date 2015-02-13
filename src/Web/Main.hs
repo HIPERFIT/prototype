@@ -26,8 +26,8 @@ import Text.Blaze.Internal (preEscapedText)
 import Data.Monoid (mconcat, mempty)
 import qualified Data.Map as M
 import Control.Monad.Trans
-
 pet = preEscapedText
+
 blaze :: Html -> ActionM ()
 blaze = html . renderHtml
 
@@ -37,7 +37,7 @@ layout t b = docTypeHtml $ do
                  title t
                  meta ! charset "utf-8"
                  meta ! httpEquiv "X-UA-Compatible" ! content "IE=edge,chrome=1"
-                 meta ! name "description" ! content "Inspire Text"
+                 meta ! name "description" ! content "Contract pricing"
                  meta ! name "viewport" ! content "width=device-width"
                  link ! href "//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" ! rel "stylesheet" ! media "screen"
                  link ! href "//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.1/css/datepicker3.min.css" ! rel "stylesheet" ! media "screen"
@@ -52,7 +52,7 @@ layout t b = docTypeHtml $ do
                         
 
 homeView :: ActionM ()
-homeView = blaze $ layout "home" $ do
+homeView = blaze $ layout "Main" $ do
              div ! class_ "container" $
                  do
                    h1 "Option pricing"
