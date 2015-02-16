@@ -7,6 +7,7 @@ import Pricing
 import CodeGen.DataGen hiding (startPrice, startDate)
 
 import Web.Scotty hiding (body)
+import Network.Wai.Middleware.Static
 import CSS
 import Data.Aeson (object, (.=))
 import Data.Text.Lazy (toStrict)
@@ -26,13 +27,14 @@ import Text.Blaze.Internal (preEscapedText)
 import Data.Monoid (mconcat, mempty)
 import qualified Data.Map as M
 import Control.Monad.Trans
+
 pet = preEscapedText
 
 blaze :: Html -> ActionM ()
 blaze = html . renderHtml
 
 layout :: Html -> Html -> Html
-layout t b = docTypeHtml $ do
+layout t pageBody = docTypeHtml $ do
                head $ do
                  title t
                  meta ! charset "utf-8"
@@ -45,9 +47,9 @@ layout t b = docTypeHtml $ do
                  body $ do
                         script ! src "//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" $ mempty
                         script ! src "//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.1/js/bootstrap-datepicker.min.js" $ mempty
---                        script ! src "//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js" $ mempty
-                        script ! type_ "text/javascript" $ ajaxFn
-                        b
+                        script ! src "/js/main.js" $ mempty
+                        script ! src "//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js" $ mempty
+                        pageBody
                         
                         
 
@@ -60,6 +62,8 @@ homeView = blaze $ layout "Main" $ do
                                      mainForm
                                      a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run pricing"
                    div ! class_ "alert alert-success" ! id "result" $ ""
+                   div ! class_ "alert alert-danger" ! id "error" $ ""
+
 
 mainForm :: Html
 mainForm = do
@@ -89,14 +93,6 @@ mainForm = do
                    input ! type_ "text" ! class_ "form-control" ! name "endDate"
                    span ! class_ "input-group-addon" $ 
                         i ! class_ "glyphicon glyphicon-calendar" $ ""
-  
-  script ! type_ "text/javascript" $ 
-         arrayToObjFn >> "$(function(){$('#startDatePicker, #endDatePicker').datepicker({autoclose: true,todayHighlight:true, format: 'yyyy-mm-dd'});});" 
-
-arrayToObjFn = "function arrayToObj(xs) {var res = {}; $.each(xs, function(i,x){res[x.name]=x.value}); return res}\n"
-
-ajaxFn = 
-    "$(document).ready(function() {$('#run').click(function(){var data = arrayToObj($('#mainForm').serializeArray()); $.post('/api/', JSON.stringify(data)).done(function(resp){$('#result').html(resp.price); $('#result').show();})})})"
 
 main = scotty 3000 $ do
     get "/" homeView
@@ -107,7 +103,7 @@ main = scotty 3000 $ do
           maturity = dateDiff (startDate optData) (endDate optData)
       res <- liftIO $ price (startDate optData, makeContract strk maturity) optData
       json $ object ["price" .= res]
-      --json p
+    middleware $ staticPolicy (addBase "src/Web/static")
 
 data OptionData = OD {
       startPrice :: Double
