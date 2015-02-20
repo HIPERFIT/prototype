@@ -4,6 +4,18 @@ function arrayToObj(xs) {
     return res
 }
 
+function collectData (ins) {
+    var res = {};
+    var v;
+    $.each($(ins), function (i, x) {
+        if ($(x).data('datatype') === 'Double') { 
+            v = parseFloat($(x).val());
+        } else v = $(x).val();
+        res[$(x).attr('name')] = v;
+    });
+    return res;
+}
+
 $(document).ready(function() {
     $('#startDatePicker, #endDatePicker')
         .datepicker({autoclose: true,
@@ -12,7 +24,7 @@ $(document).ready(function() {
     $('#run').click(function() {
         $('#result').hide();
         $('#error').hide();
-        var data = arrayToObj($('#mainForm').serializeArray());
+        var data = collectData($('input.form-control'));
         $.post('/api/', JSON.stringify(data))
             .done(function(resp) { $('#result').html(resp.price);
                                    $('#result').show();

@@ -1,18 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
+import CallOption
 import Contract hiding (i)
-import Contract.Date
 import Pricing
-import CodeGen.DataGen hiding (startPrice, startDate)
+import Utils
+import DataProviders.Csv
 
+import Data.Time
 import Web.Scotty hiding (body)
 import Network.Wai.Middleware.Static
 import CSS
-import Data.Aeson (object, (.=))
+import Data.Aeson (object, (.=), FromJSON(..), decode, eitherDecode, Value (..))
 import Data.Text.Lazy (toStrict)
 import Prelude hiding (div, head, id, span)
---import Text.Blaze.Html (Html, toHtml)
 import Text.Blaze.Html5 (Html, a, body, button,
                          dataAttribute, div, docTypeHtml,
                          form, h1, h2, head, input, li,
@@ -22,13 +23,25 @@ import Text.Blaze.Html5.Attributes (charset, class_, content, href,
                                     httpEquiv, id, media, name,
                                     placeholder, rel, src, type_)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
-import Text.Blaze.Internal (preEscapedText)
+import Text.Blaze.Internal (preEscapedText, preEscapedString)
+import Text.Blaze (stringValue)
 
 import Data.Monoid (mconcat, mempty)
-import qualified Data.Map as M
 import Control.Monad.Trans
+import Control.Monad (msum)
+import qualified Data.Map as M
+import Control.Applicative ((<$>), (<*>))
+import qualified Data.Text as T
+import Data.Typeable
+import Types
+import GHC.Generics
+
+instance FromJSON OptionData
+instance FromJSON Day where
+    parseJSON (String s) = return $ parseDate $ T.unpack s
 
 pet = preEscapedText
+pes = preEscapedString
 
 blaze :: Html -> ActionM ()
 blaze = html . renderHtml
@@ -66,84 +79,43 @@ homeView = blaze $ layout "Main" $ do
 
 
 mainForm :: Html
-mainForm = do
-  div ! class_ "form-group" $ do
-             label "Initial price"
-             input ! type_ "text" ! class_ "form-control" ! name "initPrice"
-  div ! class_ "form-group" $ do
-             label "Strike price"
-             input ! type_ "text" ! class_ "form-control" ! name "strike"
-  div ! class_ "form-group" $ do
-             label "Risk-free interest rate"
-             input ! type_ "text" ! class_ "form-control" ! name "rate"
-  div ! class_ "form-group" $ do
-             label "Volatility"
-             input ! type_ "text" ! class_ "form-control" ! name "vol"
-  div ! class_ "form-group" $ do
-             label "Start date"
-             div ! class_ "input-group date" ! id "startDatePicker" $ 
-                 do
-                   input ! type_ "text" ! class_ "form-control" ! name "startDate"
-                   span ! class_ "input-group-addon" $ 
-                        i ! class_ "glyphicon glyphicon-calendar" $ ""
-  div ! class_ "form-group" $ do
-             label "End date"
-             div ! class_ "input-group date" ! id "endDatePicker" $ 
-                 do
-                   input ! type_ "text" ! class_ "form-control" ! name "endDate"
-                   span ! class_ "input-group-addon" $ 
-                        i ! class_ "glyphicon glyphicon-calendar" $ ""
+mainForm = mconcat $ map field formData
+    where
+      formData = gtoForm (Proxy :: Proxy (Rep OptionData))
+
+field :: (String, TypeRep) -> Html
+field (name, tr) | tr == typeOf (undefined :: Double) = numField name name
+                 | tr == typeOf (undefined :: Day) = dateField name name
+
+numField :: String -> String -> Html
+numField fName fLabel = div ! class_ "form-group" $ do
+                              label $ pes fLabel
+                              input ! type_ "text" ! class_ "form-control" ! name (stringValue fName) 
+                                    ! dataAttribute "datatype" "Double"
+
+dateField :: String -> String -> Html
+dateField fName fLabel = div ! class_ "form-group" $ do
+                           label $ pes fLabel
+                           div ! class_ "input-group date" ! id (stringValue (fName ++ "Picker")) $ 
+                               do
+                                 input ! type_ "text" ! class_ "form-control" ! name (stringValue fName)
+                                 span ! class_ "input-group-addon" $ 
+                                      i ! class_ "glyphicon glyphicon-calendar" $ ""
+
+
+price :: MContract -> OptionData -> IO Double
+price contr optData = 
+    do
+      rawMarketData <- getRawData "UNDERLYING" (startDate optData) (endDate optData)
+      [price] <- runPricing pConf [(discModel, modelData, toMarketData rawMarketData)] contr
+      return price
+    where
+      (discModel, modelData) = makeInput optData
 
 main = scotty 3000 $ do
     get "/" homeView
     post "/api/" $ do
-      p <- jsonData :: ActionM (M.Map String String)
-      let optData = json2OptionData p
-          strk = strike optData
-          maturity = dateDiff (startDate optData) (endDate optData)
-      res <- liftIO $ price (startDate optData, makeContract strk maturity) optData
+      optData <- jsonData :: ActionM OptionData
+      res <- liftIO $ price (day2ContrDate $ startDate optData, makeContract optData) optData
       json $ object ["price" .= res]
     middleware $ staticPolicy (addBase "src/Web/static")
-
-data OptionData = OD {
-      startPrice :: Double
-    , strike     :: Double
-    , rate       :: Double
-    , vol        :: Double
-    , startDate  :: Date
-    , endDate    :: Date
-}
-
-pConf = DataConf {monteCarloIter = 4000000}
-
-price :: MContract -> OptionData -> IO Double
-price contr optData= 
-    do
-      [price] <- runPricing pConf inputData contr
-      return price
-    where
-      inputData = makeInput optData
-
-makeInput :: OptionData -> [(DiscModel, ModelData, MarketData)]
-makeInput od = [(ConstDisc (rate od),
-                 [BS "UNDERLYING" [(startDate od, vol od, drift)]],
-                 ([], [Quotes "UNDERLYING" [(startDate od, startPrice od)]]))
-               ]
-    where
-      drift = ((rate od) - ((vol od)^2)/2) * years
-      years = (fromIntegral (dateDiff (startDate od) (endDate od)) / 365)
-
-makeContract strike maturity = 
-    let
-        theobs = obs ("UNDERLYING", 0)
-    in transl maturity (scale (maxx (theobs - r strike) 0) (transfOne EUR "you" "me"))
-
-json2OptionData :: (M.Map String String) -> OptionData
-json2OptionData js = OD {
-                       startPrice = read $ js M.! "initPrice"
-                     , strike     = read $ js M.! "strike"
-                     , rate       = read $ js M.! "rate"
-                     , vol        = read $ js M.! "vol"
-                     , startDate  = read $ js M.! "startDate"
-                     , endDate    = read $ js M.! "endDate"
-                     }

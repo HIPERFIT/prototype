@@ -70,7 +70,6 @@ genSummary mcIter numMods numDates numUnder =
   where
     -- some magic numbers from Medium data.
     contrNum = 2
-     -- TODO provide heuristic to select number of iterations
     sobolBitLength = 30
 
 extractMeta mc@(d,c) = CM { underlyings = observables c
@@ -135,6 +134,7 @@ datesForBB sd ds = (firstDate, dates)
 
 genBBConf numUnder startDate dates = bbridgeConf numUnder $ datesForBB startDate dates 
 
+-- TODO: possibly, we should read sobol data lazily
 generateData dConf ds contr = 
   do
     vects <- readFile "./src/Pricing/CodeGen/sobol_vect.data"
