@@ -16,7 +16,16 @@ function collectData (ins) {
     return res;
 }
 
+function populateSelect ($sel, opts) {
+    $.each(opts, function (i, v) {
+        console.log(v);
+        $sel.append($("<option/>").val(v).text(v));
+    });
+    $sel.selectpicker("refresh");
+}
+
 $(document).ready(function() {
+    $('.selectpicker').selectpicker();
     $('#startDatePicker, #endDatePicker')
         .datepicker({autoclose: true,
                      todayHighlight:true, 
@@ -24,7 +33,7 @@ $(document).ready(function() {
     $('#run').click(function() {
         $('#result').hide();
         $('#error').hide();
-        var data = collectData($('input.form-control'));
+        var data = collectData($('.form-control'));
         $.post('/api/', JSON.stringify(data))
             .done(function(resp) { $('#result').html(resp.price);
                                    $('#result').show();
@@ -34,4 +43,5 @@ $(document).ready(function() {
                 $('#error').show();
             })
     })
+    $.get('/marketData/underlyings/', function (data) {populateSelect($("select[data-datatype='Underlying']"), data)});
 });

@@ -13,8 +13,11 @@ import Data.Typeable
 import Types
 import Utils
 
+type Underlying = String
+
 data OptionData = OD {
-      strike     :: Double
+      underlying :: Underlying
+    , strike     :: Double
     , rate       :: Double
     , vol        :: Double
     , startDate  :: Day
