@@ -12,8 +12,7 @@ import GHC.Generics
 import Data.Typeable
 import Types
 import Utils
-
-type Underlying = String
+import Data
 
 data OptionData = OD {
       underlying :: Underlying

@@ -11,6 +11,12 @@ import Data.Data
 import Data.Proxy
 import GHC.Generics
 
+{-
+class CGUIRep a where
+    toForm :: Proxy (Rep a) -> [(String, TypeRep)]
+    default toForm :: (Generic a, GUIRep a) => Proxy a -> [(String, TypeRep)]
+    toForm = gtoForm
+-}
 class GUIRep f where
     gtoForm :: Proxy f  -> [(String, TypeRep)]
 
