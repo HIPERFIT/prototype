@@ -33,8 +33,9 @@ $(document).ready(function() {
     $('#run').click(function() {
         $('#result').hide();
         $('#error').hide();
+        var url = '/api/' + $('#mainForm').data("url");
         var data = collectData($('.form-control'));
-        $.post('/api/', JSON.stringify(data))
+        $.post(url, JSON.stringify(data))
             .done(function(resp) { $('#result').html(resp.price);
                                    $('#result').show();
                                  })

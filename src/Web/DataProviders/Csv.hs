@@ -18,6 +18,8 @@ instance FromField Day where
 quotesFile = "./src/Web/sampledata/Quotes.csv"
 corrsFile = "./src/Web/sampledata/Correlations.csv"
 
+-- TODO: think about correlations. We not filtering them here.
+-- Maybe better use separate functions for corrs and qoutes. 
 getRawData :: String -> Day -> Day -> IO ([RawQuotes],[RawCorr])
 getRawData und fromD toD = 
     do

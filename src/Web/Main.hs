@@ -1,7 +1,8 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, GADTs #-}
 module Main where
 
 import CallOption
+import qualified RainbowOption as RO
 import Contract hiding (i)
 import Pricing
 import Utils
@@ -10,6 +11,9 @@ import DataProviders.Common
 import DataProviders.Data
 import Data
 import View
+import Service
+import Types
+import CodeGen.DataGen
 
 import Data.Time
 import Web.Scotty hiding (body, params)
@@ -22,37 +26,54 @@ import Control.Monad.Trans
 import Control.Monad (forM_)
 import Control.Applicative ((<$>), (<*>))
 import qualified Data.Text as T
-import GHC.Generics (Rep)
+import GHC.Generics (Rep, Generic)
 import Data.Proxy
+import Data.Data (typeOf, Typeable)
+import qualified Data.Map as M
+import qualified Data.ByteString.Lazy.Char8 as BL
 
 instance FromJSON OptionData
+instance FromJSON RO.RainbowOption
 
-price :: MContract -> OptionData -> IO Double
-price contr optData = 
-    do
-      rawMarketData <- getRawData "UNDERLYING" (startDate optData) (endDate optData)
-      [price] <- runPricing pConf [(discModel, modelData, toMarketData rawMarketData)] contr
-      return price
-    where
-      (discModel, modelData) = makeInput optData
+callOption = GUIRepr { guiLabel = "Call option"
+                     , params = gtoForm (Proxy :: Proxy (Rep OptionData))
+                     , url = "callOption"
+                     , guiReprType = typeOf (undefined :: OptionData) }
 
-callOption = GUIRepr { guiLabel = "Call option", params = Proxy :: Proxy (Rep OptionData), url = "/" }
 
-allContracts = [callOption]
+rainbowOption = GUIRepr { guiLabel = "Rainbow option"
+                        , params = gtoForm (Proxy :: Proxy (Rep RO.RainbowOption))
+                        , url = "rainbowOption"
+                        , guiReprType = typeOf (undefined :: RO.RainbowOption) }
+
+allContracts = [callOption, rainbowOption]
+
+data Inputable where
+    Inp :: (PricerInput a) => a -> Inputable
+
+pack :: (PricerInput a) => a -> Inputable
+pack = Inp
+
+toInput (Inp v) = makeInput v
+
+inp = do
+  ty <- param "type"
+  d <- case (ty :: String) of
+         "callOption"  -> do x <- jsonData :: ActionM OptionData
+                             return $ pack x
+         "rainbowOption" -> do x <- jsonData :: ActionM RO.RainbowOption
+                               return $ pack x  
+  res <- liftIO $ toInput d
+  return res
+
+toMap = M.fromList . map (\c -> (url c, c))
+
+urlMap = toMap allContracts
 
 main = scotty 3000 $ do
-    get (capture $ url callOption) $ homeView allContracts callOption
-    service
-
-service = do
-    get "/marketData/underlyings/" $ do
-                       availUnd <- liftIO availableUnderlyings
-                       json availUnd
-    get "/marketData/view/" $ do 
-                       quotes <- liftIO getStoredQuotes
-                       marketDataView quotes
-    post "/api/" $ do
-      optData <- jsonData :: ActionM OptionData
-      res <- liftIO $ price (day2ContrDate $ startDate optData, makeContract optData) optData
-      json $ object ["price" .= res]
-    middleware $ staticPolicy (addBase "src/Web/static")
+    get "/" $ homeView allContracts
+    get (capture $ contractsBaseUrl ++ ":type") $ do
+                       ty <- param "type"
+                       contractView allContracts (urlMap M.! ty)
+    defaultService inp availableUnderlyings getStoredQuotes pConf
+    

@@ -10,6 +10,8 @@ module Types where
 import Data.Data
 import Data.Proxy
 import GHC.Generics
+import CodeGen.DataGen
+import Contract
 
 {-
 class CGUIRep a where
@@ -17,6 +19,10 @@ class CGUIRep a where
     default toForm :: (Generic a, GUIRep a) => Proxy a -> [(String, TypeRep)]
     toForm = gtoForm
 -}
+
+class PricerInput a where
+    makeInput :: a -> IO ([(DiscModel, ModelData, MarketData)], MContract)
+
 class GUIRep f where
     gtoForm :: Proxy f  -> [(String, TypeRep)]
 

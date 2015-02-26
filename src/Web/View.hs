@@ -63,27 +63,33 @@ layout t pageContent = docTypeHtml $ do
                           navBar
                           pageContent
 
-homeView :: GUIRep a => [ContractGUIRepr a] -> ContractGUIRepr a -> ActionM ()
-homeView allContracts currentContract = blaze $ layout "Main" $ do
-                                         div ! class_ "row" $ do
-                                           div ! class_ "col-xs-4" $ leftPanel allContracts
-                                           div ! class_ "col-xs-8" $ rightPanel (params currentContract)
+contractView :: [ContractGUIRepr] -> ContractGUIRepr -> ActionM ()
+contractView allContracts currentContract = blaze $ layout "Financial contracts" $ do
+                                              div ! class_ "row" $ do
+                                                div ! class_ "col-sm-4" $ leftPanel allContracts
+                                                div ! class_ "col-sm-8" $ rightPanel currentContract
+
+homeView :: [ContractGUIRepr] -> ActionM ()
+homeView allContracts = blaze $ layout "Financial contracts" $ do
+                          div ! class_ "row" $ do
+                            div ! class_ "col-sm-4" $ leftPanel allContracts
+                            div ! class_ "col-sm-8" $ div ! class_ "jumbotron" $ do
+                                                                 h1 "Welcome!"
+                                                                 p "To financial contract pricing prototype."
+contractsBaseUrl = "/contracts/"
 
 leftPanel cs = ul ! class_ "list-group" $ forM_ labelsAndUrls toHrefList
     where
-      labelsAndUrls = map (\c -> (string $ guiLabel c, stringValue $ url c)) cs
-      toHrefList (label, url)  = li ! class_ "list-group-item" $ a ! href url $ span label
+      labelsAndUrls = map (\c -> (string $ guiLabel c, stringValue $ contractsBaseUrl ++ url c, stringValue $ show $ guiReprType c)) cs
+      toHrefList (label, url, ty)  = li ! dataAttribute "type" ty ! class_ "list-group-item" $ a ! href url $ span label
 
---rightPanel :: (Generic a, GUIRep a) => Proxy a -> Html
 rightPanel dataDescr = do
   div ! class_ "right-container" $
-      do
-        h1 "Option pricing"
-        p $ do form ! id "mainForm" $ do
-                 buildForm dataDescr
-                 a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run pricing"
-                 div ! class_ "alert alert-success" ! id "result" $ ""
-                 div ! class_ "alert alert-danger" ! id "error" $ ""
+      do 
+        buildForm dataDescr
+        a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run pricing"
+        div ! class_ "alert alert-success" ! id "result" $ ""
+        div ! class_ "alert alert-danger" ! id "error" $ ""
 
 navBar :: Html
 navBar = div ! class_ "navbar navbar-default" $ do
@@ -94,20 +100,19 @@ navBar = div ! class_ "navbar navbar-default" $ do
                                             a ! class_ "navbar-brand" ! href "#" $ "λ"
              div ! class_ "navbar-collapse collapse" $ ul ! class_ "nav navbar-nav" $ 
                  do
-                   li ! class_ "active" $ a ! href "#" $ "Home"
-                   li $ a ! href "/" $ "Pricing"
+                   li ! class_ "active" $ a ! href "/" $ "Home"
                    li $ a ! href "/marketData/view/" $ "Market Data"
 
-buildForm :: GUIRep a => Proxy (a :: * -> *) -> Html
-buildForm dataDescr = mconcat $ map field formData
+--buildForm :: GUIRep a => Proxy (a :: * -> *) -> Html
+buildForm dataDescr = form ! id "mainForm" ! dataAttribute "url" (stringValue $ url dataDescr) $ mconcat $ map field formData
     where
-      formData = gtoForm dataDescr
+      formData = params dataDescr
 
 marketDataView :: [RawQuotes] -> ActionM ()
 marketDataView quotes = blaze $ layout "Market data" $ do
-                   table ! class_ "table table-stripped" $ do
-                                                         headerRow
-                                                         forM_ quotes toRow 
+                   table ! class_ "table table-stripped" $ 
+                         do headerRow
+                            forM_ quotes toRow 
     where
       headerRow = tr $ do
                 th "Underlying"

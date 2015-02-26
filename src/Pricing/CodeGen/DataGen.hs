@@ -18,6 +18,7 @@ import Contract
 import LexifiContracts
 
 type MarketData = ([Corr], [Quotes])
+
 type SobolDirVects = [String]
 
 data Corr = Corr (String, String) Double
@@ -32,6 +33,7 @@ type ModelData = [Model]
 
 data DiscModel = ConstDisc Double 
                | CustomDisc [(Int,Double)]
+                 deriving Show
 
 data ContractMeta = CM
     { underlyings :: [String]
