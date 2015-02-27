@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
-module RainbowOption where
+module RainbowOption (RainbowOption, rainbowOption) where
 
 import Contract hiding (i)
 import Contract.Date
@@ -9,7 +9,7 @@ import CodeGen.DataGen hiding (startPrice, startDate)
 import qualified Data.Map as M
 import GHC.Generics
 import Data.Typeable
-import Types
+import TypeClass
 import Utils
 import Data
 import DataProviders.Csv
@@ -26,7 +26,9 @@ data RainbowOption = RO {
     , endDate     :: Day
 } deriving (Show, Generic, Typeable)
 
-pConf = DataConf { monteCarloIter = 4000000 }
+rainbowOption = GUIRepr { guiLabel = "Rainbow option"
+                        , params = gtoForm (Proxy :: Proxy (Rep RainbowOption))
+                        , url = "rainbowOption" }
 
 instance PricerInput RainbowOption where
     makeInput od = do

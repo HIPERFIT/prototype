@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric, StandaloneDeriving #-}
-module CallOption where
+{-# LANGUAGE DeriveGeneric #-}
+module CallOption (CallOption, callOption) where
 
 import Contract hiding (i)
 import Contract.Date
@@ -9,35 +9,41 @@ import CodeGen.DataGen hiding (startPrice, startDate)
 import qualified Data.Map as M
 import GHC.Generics
 import Data.Typeable
-import Types
+import TypeClass
 import Utils
 import Data
 import DataProviders.Csv
 import DataProviders.Common
 
-data OptionData = OD {
+data CallOption = OD {
       underlying :: Underlying
     , strike     :: Double
     , rate       :: Double
-    , vol        :: Double
+    , volatility :: Double
     , startDate  :: Day
     , endDate    :: Day
 } deriving (Show, Generic, Typeable)
 
-pConf = DataConf { monteCarloIter = 4000000 }
 
-instance PricerInput OptionData where
+callOption = GUIRepr { guiLabel = "Call option"
+                     , params = gtoForm (Proxy :: Proxy (Rep CallOption))
+                     , url = "callOption" }
+
+instance PricerInput CallOption where
     makeInput od = do
-      rawData <- getRawData "UNDERLYING" (startDate od) (endDate od)
-      return ([(ConstDisc (rate od), [BS "UNDERLYING" [(day2ContrDate $ startDate od, vol od, drift)]], toMarketData rawData)], mContr)
+      rawData <- getRawData (underlying od) (startDate od) (endDate od)
+      return ([(ConstDisc (rate od), [blackSholesModel od], toMarketData rawData)], mContr)
         where
-          drift = ((rate od) - ((vol od)^2)/2) * years
-          years = (fromIntegral (diffDays (endDate od) (startDate od) ) / 365)
           mContr = (day2ContrDate $ startDate od, makeContract od)
+
+blackSholesModel od = BS (underlying od) [(day2ContrDate $ endDate od, volatility od, drift)]
+    where
+      drift = ((rate od) - ((volatility od)^2)/2) * years
+      years = (fromIntegral (diffDays (endDate od) (startDate od) ) / 365)
 
 makeContract optData = 
     let
         maturity = fromIntegral $ diffDays (endDate optData) (startDate optData) 
-        theobs = obs ("UNDERLYING", 0)
+        theobs = obs (underlying optData, 0)
         strk = r $ strike optData
     in transl maturity (scale (maxx (theobs - strk) 0) (transfOne EUR "you" "me"))

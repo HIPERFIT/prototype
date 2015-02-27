@@ -6,7 +6,7 @@ module View where
 import DataProviders.Data
 import Utils
 import Data
-import Types
+import TypeClass
 
 import Data.Time
 import Web.Scotty hiding (body, params)
@@ -80,8 +80,8 @@ contractsBaseUrl = "/contracts/"
 
 leftPanel cs = ul ! class_ "list-group" $ forM_ labelsAndUrls toHrefList
     where
-      labelsAndUrls = map (\c -> (string $ guiLabel c, stringValue $ contractsBaseUrl ++ url c, stringValue $ show $ guiReprType c)) cs
-      toHrefList (label, url, ty)  = li ! dataAttribute "type" ty ! class_ "list-group-item" $ a ! href url $ span label
+      labelsAndUrls = map (\c -> (string $ guiLabel c, stringValue $ contractsBaseUrl ++ url c)) cs
+      toHrefList (label, url)  = li ! class_ "list-group-item" $ a ! href url $ span label
 
 rightPanel dataDescr = do
   div ! class_ "right-container" $
