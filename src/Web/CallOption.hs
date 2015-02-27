@@ -32,11 +32,11 @@ callOption = GUIRepr { guiLabel = "Call option"
 instance PricerInput CallOption where
     makeInput od = do
       rawData <- getRawData (underlying od) (startDate od) (endDate od)
-      return ([(ConstDisc (rate od), [blackSholesModel od], toMarketData rawData)], mContr)
+      return ([(ConstDisc (rate od), [blackScholesModel od], toMarketData rawData)], mContr)
         where
           mContr = (day2ContrDate $ startDate od, makeContract od)
 
-blackSholesModel od = BS (underlying od) [(day2ContrDate $ endDate od, volatility od, drift)]
+blackScholesModel od = BS (underlying od) [(day2ContrDate $ endDate od, volatility od, drift)]
     where
       drift = ((rate od) - ((volatility od)^2)/2) * years
       years = (fromIntegral (diffDays (endDate od) (startDate od) ) / 365)

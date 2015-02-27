@@ -7,7 +7,7 @@
    // Correlation
 {|CORR|}
    
-   // Black-Sholes model data (volatility and drift) 
+   // Black-Scholes model data (volatility and drift) 
 {|MODELDATA|}
    
    // Prices at start date
