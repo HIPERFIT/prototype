@@ -20,7 +20,7 @@ import Text.Blaze.Html5 (Html, a, body, button,
                          link, meta, p, script, style,
                          title, ul, (!), form, input, label, 
                          option, button, span, i, select, 
-                         table, tr, td, th, stringValue)
+                         table, tr, td, th, stringValue, tbody, thead, AttributeValue)
 import Text.Blaze.Html5.Attributes (charset, class_, content, href,
                                     httpEquiv, id, media, name,
                                     placeholder, rel, src, type_)
@@ -33,6 +33,11 @@ import GHC.Generics (Rep, Generic)
 import Control.Monad (forM_)
 import Data.Monoid (mconcat, mempty)
 
+menuItems = [homeMenuItem, marketDataMenuItem]
+homeMenuItem = ("Home", "/")
+marketDataMenuItem = ("Market Data", "/marketData/view/")
+contractsBaseUrl = "/contracts/"
+
 instance FromJSON Day where
     parseJSON (String s) = return $ parseDate $ T.unpack s
 
@@ -41,8 +46,8 @@ pet = preEscapedText
 blaze :: Html -> ActionM ()
 blaze = html . renderHtml
 
-layout :: Html -> Html -> Html
-layout t pageContent = docTypeHtml $ do
+layout :: Html  -> Maybe String -> Html -> Html
+layout t activeMenuItem pageContent = docTypeHtml $ do
                head $ do
                  title t
                  meta ! charset "utf-8"
@@ -60,23 +65,22 @@ layout t pageContent = docTypeHtml $ do
                         script ! src "//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js" $ mempty
                         script ! src "//cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.6.3/js/bootstrap-select.min.js" $ mempty
                         div ! class_ "container" $ do
-                          navBar
+                          navBar activeMenuItem
                           pageContent
 
 contractView :: [ContractGUIRepr] -> ContractGUIRepr -> ActionM ()
-contractView allContracts currentContract = blaze $ layout "Financial contracts" $ do
+contractView allContracts currentContract = blaze $ layout "Financial contracts" Nothing $ do
                                               div ! class_ "row" $ do
                                                 div ! class_ "col-sm-4" $ leftPanel allContracts
                                                 div ! class_ "col-sm-8" $ rightPanel currentContract
 
 homeView :: [ContractGUIRepr] -> ActionM ()
-homeView allContracts = blaze $ layout "Financial contracts" $ do
+homeView allContracts = blaze $ layout "Financial contracts" (Just (snd homeMenuItem)) $ do
                           div ! class_ "row" $ do
                             div ! class_ "col-sm-4" $ leftPanel allContracts
                             div ! class_ "col-sm-8" $ div ! class_ "jumbotron" $ do
                                                                  h1 "Welcome!"
                                                                  p "To financial contract pricing prototype."
-contractsBaseUrl = "/contracts/"
 
 leftPanel cs = ul ! class_ "list-group" $ forM_ labelsAndUrls toHrefList
     where
@@ -91,28 +95,34 @@ rightPanel dataDescr = do
         div ! class_ "alert alert-success" ! id "result" $ ""
         div ! class_ "alert alert-danger" ! id "error" $ ""
 
-navBar :: Html
-navBar = div ! class_ "navbar navbar-default" $ do
+navBar :: Maybe String -> Html
+navBar activeMenuItem = div ! class_ "navbar navbar-default" $ do
            div ! class_ "navbar-header" $ do
              button ! type_ "button"
                     ! class_ "navbar-toggle" ! dataAttribute "toggle" "collapse" 
                     ! dataAttribute "target" ".navbar-collapse" $ do
                                             a ! class_ "navbar-brand" ! href "#" $ "λ"
-             div ! class_ "navbar-collapse collapse" $ ul ! class_ "nav navbar-nav" $ 
-                 do
-                   li ! class_ "active" $ a ! href "/" $ "Home"
-                   li $ a ! href "/marketData/view/" $ "Market Data"
+             div ! class_ "navbar-collapse collapse" $ ul ! class_ "nav navbar-nav" $
+                 mconcat $ map (buildMenuItem activeMenuItem) menuItems
 
---buildForm :: GUIRep a => Proxy (a :: * -> *) -> Html
-buildForm dataDescr = form ! id "mainForm" ! dataAttribute "url" (stringValue $ url dataDescr) $ mconcat $ map field formData
+buildMenuItem activeItem (label, url) = 
+    case activeItem of
+      Just activeUrl | activeUrl == url -> li ! class_ "active" $ link
+                     | otherwise -> li $ link
+      Nothing -> li $ link
+    where
+      link = a ! href (stringValue url) $ string label
+
+buildForm dataDescr = form ! id "mainForm" ! dataAttribute "url" (stringValue $ url dataDescr) $
+                      mconcat $ map field formData
     where
       formData = params dataDescr
 
 marketDataView :: [RawQuotes] -> ActionM ()
-marketDataView quotes = blaze $ layout "Market data" $ do
-                   table ! class_ "table table-stripped" $ 
-                         do headerRow
-                            forM_ quotes toRow 
+marketDataView quotes = blaze $ layout "Market data" (Just (snd marketDataMenuItem)) $ do
+                   table ! class_ "table table-striped" $ 
+                         do thead $ headerRow
+                            tbody $ forM_ quotes toRow 
     where
       headerRow = tr $ do
                 th "Underlying"
