@@ -18,7 +18,6 @@ function collectData (ins) {
 
 function populateSelect ($sel, opts) {
     $.each(opts, function (i, v) {
-        console.log(v);
         $sel.append($("<option/>").val(v).text(v));
     });
     $sel.selectpicker("refresh");
@@ -31,12 +30,15 @@ $(document).ready(function() {
                      todayHighlight:true, 
                      format: 'yyyy-mm-dd'});
     $('#run').click(function() {
-        $('#result').hide();
-        $('#error').hide();
+        $('#result').empty().hide();
+        $('#error').empty().hide();
         var url = '/api/' + $('#mainForm').data("url");
         var data = collectData($('.form-control'));
-        $.post(url, JSON.stringify(data))
-            .done(function(resp) { $('#result').html(resp.price);
+        var conf = parseInt($('input[name="monteCarloIter"]').val());
+        $.post(url, { "contractData" : JSON.stringify(data),
+                      "conf" : JSON.stringify({monteCarloIter : conf})
+                    })
+            .done(function(resp) { $('#result').html("Pricing result: " + resp.price);
                                    $('#result').show();
                                  })
             .fail(function(jqXHR, textStatus, errorThrown) {

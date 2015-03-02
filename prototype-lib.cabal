@@ -57,7 +57,7 @@ executable             web
                      , mtl >= 2.2.1
                      , old-locale >= 1.0.0.6
                      , prototype-lib
-                     , scotty
+                     , scotty >= 0.9.1
                      , text
                      , time >= 1.4.2
                      , vector >= 0.10.12.2

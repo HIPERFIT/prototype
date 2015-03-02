@@ -20,9 +20,7 @@ instance FromJSON RO.RainbowOption
 
 allContracts = [CO.callOption, RO.rainbowOption]
 
-pConf = DataConf { monteCarloIter = 4000000 }
-
 main = scotty 3000 $ do
-    api "callOption"    pConf (jsonData :: ActionM CO.CallOption)
-    api "rainbowOption" pConf (jsonData :: ActionM RO.RainbowOption)
+    api "callOption"    (jsonContract :: ActionM CO.CallOption)
+    api "rainbowOption" (jsonContract :: ActionM RO.RainbowOption)
     defaultService allContracts availableUnderlyings getStoredQuotes

@@ -18,8 +18,8 @@ import DataProviders.Common
 data RainbowOption = RO {
       underlying1 :: Underlying
     , vol1        :: Double
-    , vol2        :: Double
     , underlying2 :: Underlying
+    , vol2        :: Double
     , strike      :: Double
     , rate        :: Double
     , startDate   :: Day

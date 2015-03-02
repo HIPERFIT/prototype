@@ -32,7 +32,10 @@ callOption = GUIRepr { guiLabel = "Call option"
 instance PricerInput CallOption where
     makeInput od = do
       rawData <- getRawData (underlying od) (startDate od) (endDate od)
-      return ([(ConstDisc (rate od), [blackScholesModel od], toMarketData rawData)], mContr)
+      return ([(ConstDisc (rate od), 
+                [blackScholesModel od], 
+                toMarketData rawData)], 
+              mContr)
         where
           mContr = (day2ContrDate $ startDate od, makeContract od)
 

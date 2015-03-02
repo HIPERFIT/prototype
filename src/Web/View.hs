@@ -20,7 +20,8 @@ import Text.Blaze.Html5 (Html, a, body, button,
                          link, meta, p, script, style,
                          title, ul, (!), form, input, label, 
                          option, button, span, i, select, 
-                         table, tr, td, th, stringValue, tbody, thead, AttributeValue)
+                         table, tr, td, th, stringValue, tbody, 
+                         thead, fieldset, legend, AttributeValue)
 import Text.Blaze.Html5.Attributes (charset, class_, content, href,
                                     httpEquiv, id, media, name,
                                     placeholder, rel, src, type_)
@@ -66,6 +67,8 @@ layout t activeMenuItem pageContent = docTypeHtml $ do
                         script ! src "//cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.6.3/js/bootstrap-select.min.js" $ mempty
                         div ! class_ "container" $ do
                           navBar activeMenuItem
+                          div ! class_ "alert alert-success" ! id "result" $ ""
+                          div ! class_ "alert alert-danger" ! id "error" $ ""
                           pageContent
 
 contractView :: [ContractGUIRepr] -> ContractGUIRepr -> ActionM ()
@@ -89,11 +92,10 @@ leftPanel cs = ul ! class_ "list-group" $ forM_ labelsAndUrls toHrefList
 
 rightPanel dataDescr = do
   div ! class_ "right-container" $
-      do 
+      do
+        h2 $ string $ guiLabel dataDescr
         buildForm dataDescr
         a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run pricing"
-        div ! class_ "alert alert-success" ! id "result" $ ""
-        div ! class_ "alert alert-danger" ! id "error" $ ""
 
 navBar :: Maybe String -> Html
 navBar activeMenuItem = div ! class_ "navbar navbar-default" $ do
@@ -113,8 +115,13 @@ buildMenuItem activeItem (label, url) =
     where
       link = a ! href (stringValue url) $ string label
 
-buildForm dataDescr = form ! id "mainForm" ! dataAttribute "url" (stringValue $ url dataDescr) $
-                      mconcat $ map field formData
+buildForm dataDescr = form ! id "mainForm" ! dataAttribute "url" (stringValue $ url dataDescr) $ do
+                      fieldset $ do
+                        legend "Contract data" 
+                        mconcat $ map field formData
+                      fieldset $ do
+                        legend "Pricer parameters"
+                        numField "monteCarloIter" "Number of iterations"
     where
       formData = params dataDescr
 
