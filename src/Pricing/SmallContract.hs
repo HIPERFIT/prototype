@@ -26,7 +26,7 @@ mEuropean = (at "2011-12-09", european)
 
 inputData :: [(DiscModel, ModelData, MarketData)]
 inputData = [(ConstDisc 0.0200823,
-             [BS "DJ_Eurostoxx_50" [(read "2011-12-09", 0.19, -0.0276481070940405)]],
+             [BS "DJ_Eurostoxx_50" [(read "2012-11-30", 0.19, -0.0276481070940405)]],
              ([], [Quotes "DJ_Eurostoxx_50" [(read "2011-12-09", 3758.05)]]))
            ]
 

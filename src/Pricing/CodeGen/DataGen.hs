@@ -59,13 +59,17 @@ genInput dConf ds sob cMeta = context
     discounts discM = map (discount discM) dayOffsets
     discs = map discounts discMs
     bbMeta = ppBBMeta $ genBBConf numUnder (startDate cMeta) (allDates cMeta)
-    modelData = ppModelData $ unzip $ map prepareModelData ms
+    modelData = ppModelData $ unzip $ map prepareModelData $ map (map (filterModelData (allDates cMeta))) ms
     stPrice = show $ map (startPrice (startDate cMeta)) quotes
     corrs = ppCorrs $ map (cholesky . (corrMatr (underlyings cMeta))) sourceCorrs
     context = [("SUMMARY", summary), ("DIRVECT", ppDirVects sob),
                ("CORR", corrs), ("MODELDATA", modelData), ("STARTPRICE", stPrice),
                ("DETVALS", inSqBr $ commaSeparated $ replicate numMods "[]"), 
                ("DISCOUNTS", show discs), ("BBMETA", bbMeta)]
+
+filterModelData dates (BS und ms) = BS und $ filter f ms
+    where
+      f m@(date, v, d) = date `elem` dates
 
 genSummary mcIter numMods numDates numUnder = 
     intercalate "\n" $ map show [contrNum, mcIter, numDates, numUnder, numMods, sobolBitLength] 
@@ -113,7 +117,6 @@ prepareModelData md = (vols, drifts)
                   (_, vols, drifts) -> (vols, drifts)
 
 startPrice date qs = map (getPrice date) $ sortBy (comparing (\(Quotes n _) -> n)) qs
-
 
 getPrice date (Quotes _ qs) = case (find ((== date) . fst) qs) of
                               Just (_,v) -> v
