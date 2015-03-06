@@ -1,4 +1,4 @@
-{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module View where
@@ -7,9 +7,11 @@ import DataProviders.Data
 import Utils
 import Data
 import TypeClass
+import CodeGen.DataGen (ppDouble)
+import PersistentData
 
 import Data.Time
-import Web.Scotty hiding (body, params)
+import Web.Scotty hiding (body, params, text)
 import CSS
 import Data.Aeson (object, (.=), FromJSON(..), decode, eitherDecode, Value (..))
 import Data.Text.Lazy (toStrict)
@@ -26,7 +28,7 @@ import Text.Blaze.Html5.Attributes (charset, class_, content, href,
                                     httpEquiv, id, media, name,
                                     placeholder, rel, src, type_)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
-import Text.Blaze.Internal (preEscapedText, string)
+import Text.Blaze.Internal (preEscapedText, string, text)
 import Text.Blaze (stringValue)
 import qualified Data.Text as T
 import Data.Data
@@ -34,9 +36,11 @@ import GHC.Generics (Rep, Generic)
 import Control.Monad (forM_)
 import Data.Monoid (mconcat, mempty)
 
-menuItems = [homeMenuItem, marketDataMenuItem]
-homeMenuItem = ("Home", "/")
+menuItems = [instrumentsMenuItem, myPortfolioMenuItem, marketDataMenuItem, modelDataMenuItem]
+instrumentsMenuItem = ("Instruments", "/")
+myPortfolioMenuItem = ("My Portfolio", "/portfolio/")
 marketDataMenuItem = ("Market Data", "/marketData/view/")
+modelDataMenuItem = ("Model Data", "/modelData/")
 contractsBaseUrl = "/contracts/"
 
 instance FromJSON Day where
@@ -78,7 +82,7 @@ contractView allContracts currentContract = blaze $ layout "Financial contracts"
                                                 div ! class_ "col-sm-8" $ rightPanel currentContract
 
 homeView :: [ContractGUIRepr] -> ActionM ()
-homeView allContracts = blaze $ layout "Financial contracts" (Just (snd homeMenuItem)) $ do
+homeView allContracts = blaze $ layout "Financial contracts" (Just (snd instrumentsMenuItem)) $ do
                           div ! class_ "row" $ do
                             div ! class_ "col-sm-4" $ leftPanel allContracts
                             div ! class_ "col-sm-8" $ div ! class_ "jumbotron" $ do
@@ -95,7 +99,7 @@ rightPanel dataDescr = do
       do
         h2 $ string $ guiLabel dataDescr
         buildForm dataDescr
-        a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run pricing"
+        a ! class_ "btn btn-lg btn-primary" ! id "add" ! href "#" $ "Add to portfolio"
 
 navBar :: Maybe String -> Html
 navBar activeMenuItem = div ! class_ "navbar navbar-default" $ do
@@ -116,33 +120,51 @@ buildMenuItem activeItem (label, url) =
       link = a ! href (stringValue url) $ string label
 
 buildForm dataDescr = form ! id "mainForm" ! dataAttribute "url" (stringValue $ url dataDescr) $ do
-                      fieldset $ do
-                        legend "Contract data" 
-                        mconcat $ map field formData
-                      fieldset $ do
-                        legend "Pricer parameters"
-                        numField "monteCarloIter" "Number of iterations"
+                      fieldset ! class_ "contract-data" $ mconcat $ map field formData
+                      fieldset ! class_ "common-data" $ mconcat $ map field commonFields
     where
       formData = params dataDescr
+      commonFields = gtoForm (Proxy :: Proxy (Rep CommonContractData))
 
 marketDataView :: [RawQuotes] -> ActionM ()
-marketDataView quotes = blaze $ layout "Market data" (Just (snd marketDataMenuItem)) $ do
-                   table ! class_ "table table-striped" $ 
-                         do thead $ headerRow
-                            tbody $ forM_ quotes toRow 
+marketDataView quotes = blaze $ layout "Market Data" (Just (snd marketDataMenuItem)) $
+                   buildTable (headerRow, map toRow quotes)
     where
-      headerRow = tr $ do
-                th "Underlying"
-                th "Date"
-                th "Price"
-      toRow (und, date, price) = tr $ do
-                td $ string und
-                td $ string $ formatDate date
-                td $ string $ show price
+      headerRow = ["Underlying", "Date", "Price"]
+      toRow (und, date, price) = [string und, string $ formatDate date, string $ show price]
+
+portfolioView portfolio = blaze $ layout "My Portfolio" (Just (snd myPortfolioMenuItem)) $ do
+                            div ! class_ "row" $ do
+                                div ! class_ "col-sm-8" $ buildTable (headerRow, (map pItemRow portfolio) ++ [totalRow])
+                                div ! class_ "col-sm-4" $ do
+                                                   pricingForm
+                                                   a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run valuation"
+    where
+      headerRow =  ["Nominal", "Underlying", "Date", "Price", ""]
+      pItemRow (k, p) = [string $ show $ pFItemNominal p, text $ pFItemContractType p, string $ formatDate $ pFItemStartDate p,
+                         span ! class_ "price-output label label-success" $ "", a ! dataAttribute "id" (stringValue k) ! href "#" ! class_ "del-item" $
+                              i ! class_ "glyphicon glyphicon-trash" $ ""]
+      totalRow = ["Total", "", "", span ! class_ "total-output label label-success" $ "", ""]
+
+modelDataView md = do
+  blaze $ layout "Model Data" (Just (snd modelDataMenuItem)) $
+                   buildTable (headerRow, map toRow md)
+    where
+      headerRow = ["Underlying", "Volatility"]
+      toRow (und, vol) = [string und, string $ ppDouble 3 vol]
+
+buildTable (headers, rows) = table ! class_ "table table-striped" $ do
+                                thead $ tr $ mconcat $ map th headers
+                                tbody $ mconcat $ map tr $ map row rows
+    where
+      row xs = mconcat $ map td xs
+
+pricingForm = mconcat $ map field $ gtoForm (Proxy :: Proxy (Rep PricingForm))
 
 field :: (String, TypeRep) -> Html
-field (name, tr) | tr == typeOf (undefined :: Double) = numField name name
-                 | tr == typeOf (undefined :: Day) = dateField name name
+field (name, tr) | tr == typeOf (undefined :: Double) ||
+                   tr == typeOf (undefined :: Int)        = numField name name
+                 | tr == typeOf (undefined :: Day)        = dateField name name
                  | tr == typeOf (undefined :: Underlying) = selectField name name
 
 numField :: String -> String -> Html

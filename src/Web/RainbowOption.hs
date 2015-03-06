@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
 module RainbowOption (RainbowOption, rainbowOption) where
@@ -14,6 +15,7 @@ import Utils
 import Data
 import DataProviders.Csv
 import DataProviders.Common
+import PersistentData
 
 data RainbowOption = RO {
       underlying1 :: Underlying
@@ -22,14 +24,13 @@ data RainbowOption = RO {
     , vol2        :: Double
     , strike      :: Double
     , rate        :: Double
-    , startDate   :: Day
     , endDate     :: Day
 } deriving (Show, Generic, Typeable)
 
 rainbowOption = GUIRepr { guiLabel = "Rainbow option"
                         , params = gtoForm (Proxy :: Proxy (Rep RainbowOption))
                         , url = "rainbowOption" }
-
+{-
 instance PricerInput RainbowOption where
     makeInput od = do
       -- TODO: ignoring correlations for now.
@@ -55,3 +56,9 @@ makeContract optData =
         val = maxx 0 ((maxx und1 und2) - strk)
     in
       transl maturity $ scale val $ transfOne EUR "me" "you"
+
+instance ToPortfolioItem RainbowOption where
+    toPFItem c = PFItem { pFItemStartDate = startDate c
+                        , pFItemContractType = "RainbowOption"
+                        , pFItemNominal = nominal c}
+-}
