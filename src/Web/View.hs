@@ -18,7 +18,7 @@ import Data.Text.Lazy (toStrict)
 import Prelude hiding (div, head, id, span)
 import Text.Blaze.Html5 (Html, a, body, button,
                          dataAttribute, div, docTypeHtml,
-                         form, h1, h2, head, input, li,
+                         form, h1, h2, h4, head, input, li,
                          link, meta, p, script, style,
                          title, ul, (!), form, input, label, 
                          option, button, span, i, select, 
@@ -120,8 +120,8 @@ buildMenuItem activeItem (label, url) =
       link = a ! href (stringValue url) $ string label
 
 buildForm dataDescr = form ! id "mainForm" ! dataAttribute "url" (stringValue $ url dataDescr) $ do
-                      fieldset ! class_ "contract-data" $ mconcat $ map field formData
-                      fieldset ! class_ "common-data" $ mconcat $ map field commonFields
+                        fieldset ! class_ "common-data" $ mconcat $ map field commonFields
+                        fieldset ! class_ "contract-data" $ mconcat $ map field formData
     where
       formData = params dataDescr
       commonFields = gtoForm (Proxy :: Proxy (Rep CommonContractData))
@@ -142,22 +142,22 @@ portfolioView portfolio = blaze $ layout "My Portfolio" (Just (snd myPortfolioMe
     where
       headerRow =  ["Nominal", "Underlying", "Date", "Price", ""]
       pItemRow (k, p) = [string $ show $ pFItemNominal p, text $ pFItemContractType p, string $ formatDate $ pFItemStartDate p,
-                         span ! class_ "price-output label label-success" $ "", a ! dataAttribute "id" (stringValue k) ! href "#" ! class_ "del-item" $
+                         h4 $ span ! class_ "price-output label label-info" $ "", a ! dataAttribute "id" (stringValue k) ! href "#" ! class_ "del-item" $
                               i ! class_ "glyphicon glyphicon-trash" $ ""]
-      totalRow = ["Total", "", "", span ! class_ "total-output label label-success" $ "", ""]
+      totalRow = ["Total", "", "", h4 $ span ! class_ "total-output label label-success" $ "", ""]
 
 modelDataView md = do
   blaze $ layout "Model Data" (Just (snd modelDataMenuItem)) $
                    buildTable (headerRow, map toRow md)
     where
-      headerRow = ["Underlying", "Volatility"]
-      toRow (und, vol) = [string und, string $ ppDouble 3 vol]
+      headerRow = ["Underlying", "Date", "Volatility"]
+      toRow (und, d, vol) = [string und, string $ formatDate d, string $ ppDouble 3 vol]
 
 buildTable (headers, rows) = table ! class_ "table table-striped" $ do
                                 thead $ tr $ mconcat $ map th headers
                                 tbody $ mconcat $ map tr $ map row rows
     where
-      row xs = mconcat $ map td xs
+      row xs = mconcat $ map (td ! class_ "vert-align fixed-height") xs
 
 pricingForm = mconcat $ map field $ gtoForm (Proxy :: Proxy (Rep PricingForm))
 

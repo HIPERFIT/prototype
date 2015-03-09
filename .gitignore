@@ -1,4 +1,5 @@
 *~
 *.data
 *.cl
+*.sqlite3
 dist/*

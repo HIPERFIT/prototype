@@ -24,3 +24,4 @@ Emacs Haskell-mode users
 ------------------
 
 Use `haskell-session-change-target` command to set proper target: `tests` when running tests/Tests.hs and `web` for web interface.
+    

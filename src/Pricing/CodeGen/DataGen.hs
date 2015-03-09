@@ -9,6 +9,7 @@ import Data.Ord
 import qualified Numeric.LinearAlgebra.HMatrix as M
 import GHC.TypeLits
 import qualified Data.Vector as V
+import Data.Time.Calendar
 
 import CodeGen.BBridgeGen
 import CodeGen.Utils
@@ -38,6 +39,7 @@ data DiscModel = ConstDisc Double
 data ContractMeta = CM
     { underlyings :: [String]
     , startDate   :: Date 
+    , endDate     :: Date
     , obsDates    :: [Date]
     , transfDates :: [Date]
     , allDates    :: [Date] -- observable & transfer dates
@@ -80,6 +82,7 @@ genSummary mcIter numMods numDates numUnder =
 
 extractMeta mc@(d,c) = CM { underlyings = observables c
                           , startDate = d
+                          , endDate = maximum dates
                           , obsDates = oDates
                           , transfDates = tDates
                           , allDates = dates}
@@ -115,6 +118,12 @@ prepareModelData md = (vols, drifts)
     drifts = Data.List.transpose $ map (snd . f) sorted
     f (BS _ xs) = case (unzip3 xs) of
                   (_, vols, drifts) -> (vols, drifts)
+
+bsRiskFreeRate :: String -> [(String, Date, Double)] -> Double -> Date -> Date -> Model
+bsRiskFreeRate und rawData rate fromD toD = BS und $ map convert rawData
+    where
+      convert (_, d, v) = (d, v, (rate - (v^2)/2) * years)
+      years = (fromIntegral (dateDiff fromD toD ) / 365)
 
 startPrice date qs = map (getPrice date) $ sortBy (comparing (\(Quotes n _) -> n)) qs
 

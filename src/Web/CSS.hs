@@ -14,3 +14,5 @@ layoutCss = render $ do
               element ".right-container" ? (maxWidth $ px 950)
               element "#result" ? (display none)
               element "#error" ? (display none)
+              element ".table" |> tbody |> tr |> element "td.vert-align" ? verticalAlign middle 
+              element ".table" |> tbody |> tr |> element "td.fixed-height" ? (height $ px 60)

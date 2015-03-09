@@ -11,6 +11,9 @@ import Data.List
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Vector as V
+import Data.Maybe
+import Data.Ord
+import Data.List (find, sortBy)
 
 instance FromField Day where
     parseField s = return $ parseDate $ B.unpack s
@@ -21,15 +24,20 @@ modelDataFile = "./src/Web/sampledata/ModelData.csv"
 
 -- TODO: think about correlations. We not filtering them here.
 -- Maybe better use separate functions for corrs and qoutes. 
-getRawData :: [String] -> Day -> Day -> IO ([RawQuotes],[RawCorr])
+{-getRawData :: [String] -> [Day] -> IO ([RawQuotes],[RawCorr])
 getRawData unds fromD toD = 
     do
       quotes <- getStoredQuotes
       corrs <- getStoredCorrs
-      return $ (filterQuotes unds fromD toD quotes, corrs)
+      return $ (filterQuotes unds fromD toD quotes, corrs) -}
 
-filterQuotes :: [String] -> Day -> Day -> [RawQuotes] -> [RawQuotes]
-filterQuotes unds fromD toD qs = [q | q@(und_, d, p) <- qs, und_ `elem` unds && fromD <= d && d <= toD ]
+getRawQuotes :: [Day] -> String -> IO [RawQuotes]
+getRawQuotes days und = 
+    do
+      quotes <- getStoredQuotes
+      return $ findClosestData days $ filterByUnderlying und quotes
+
+filterByUnderlying und xs = filter (\(und',_,_) -> und' == und) xs
 
 availableUnderlyings :: IO [String]
 availableUnderlyings = do
@@ -52,12 +60,25 @@ getStoredCorrs = do
                      Right v -> V.toList v
   return corrs
 
-getRawModelData :: String -> Day -> Day -> IO [RawModelData]
-getRawModelData und fromD toD  = do
+getStoredModelData :: IO [RawModelData]
+getStoredModelData = do
   csvMd <- BL.readFile modelDataFile
   let md = case decode NoHeader csvMd  of
              Left err -> error err
              Right v -> V.toList v
-  return $ filterRawModelData und fromD toD md
+  return md
 
-filterRawModelData und fromD toD xs = [q | q@(und_, d, p) <- xs, und_ == und && fromD <= d && d <= toD ]
+getRawModelData :: [Day] -> String -> IO [RawModelData]
+getRawModelData days und = do
+  md <- getStoredModelData
+  return $ findClosestData days $ filterByUnderlying und md
+
+findClosestData forDays inData = map (closestDataBefore inData) forDays
+
+closestDataBefore mds d = case clData of
+                            Just (und, date, v) -> (und, d, v)
+                            Nothing -> throwErr
+    where
+      clData = find (\(_,d',_) -> d' <= d) $ reverse $ sortBy (comparing extrDate) mds
+      throwErr = error ("No data for date " ++ show d)
+      extrDate (_, dt, _) = dt
