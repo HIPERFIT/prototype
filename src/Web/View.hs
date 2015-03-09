@@ -140,7 +140,7 @@ portfolioView portfolio = blaze $ layout "My Portfolio" (Just (snd myPortfolioMe
                                                    pricingForm
                                                    a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run valuation"
     where
-      headerRow =  ["Nominal", "Underlying", "Date", "Price", ""]
+      headerRow =  ["Nominal", "Contract", "Date", "Value", ""]
       pItemRow (k, p) = [string $ show $ pFItemNominal p, text $ pFItemContractType p, string $ formatDate $ pFItemStartDate p,
                          h4 $ span ! class_ "price-output label label-info" $ "", a ! dataAttribute "id" (stringValue k) ! href "#" ! class_ "del-item" $
                               i ! class_ "glyphicon glyphicon-trash" $ ""]

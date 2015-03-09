@@ -5,7 +5,6 @@ module Service where
 import View
 import Pricing (runPricing)
 import DataProviders.Data
-import DataProviders.Csv
 import DataProviders.Common
 import CodeGen.DataGen hiding (startDate)
 import Contract
@@ -37,24 +36,24 @@ import Database.Persist.Sql (toSqlKey, fromSqlKey)
 instance FromJSON CommonContractData
 instance FromJSON PricingForm
 
-defaultService allContracts availableUnderlyings storedQuotes storedMd = do
+defaultService allContracts dataProvider = do
     get "/" $ homeView allContracts
     get (capture $ contractsBaseUrl ++ ":type") $ do
                        ty <- param "type"
                        contractView allContracts (toMap allContracts M.! ty)
     get "/marketData/underlyings/" $ do
-      availUnd <- liftIO availableUnderlyings
+      availUnd <- liftIO (storedUnderlyings dataProvider)
       json availUnd
     get "/marketData/view/" $ do 
-      quotes <- liftIO storedQuotes
+      quotes <- liftIO $ storedQuotes dataProvider
       marketDataView quotes
     get "/modelData/" $ do
-      md <- liftIO $ storedMd
+      md <- liftIO $ storedModelData dataProvider
       modelDataView md
     post "/pricer/" $ do
       pricingForm <- (jsonParam "conf") :: ActionM PricingForm
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
-      res <- liftIO $ mapM (valuate pricingForm) $ map P.entityVal pItems
+      res <- liftIO $ mapM (valuate pricingForm dataProvider) $ map P.entityVal pItems
       json $ object [ "prices" .= map (ppDouble 4) res
                     , "total" .= (ppDouble 4 $ sum res) ]
     delete "/portfolio/:id" $ do
@@ -90,8 +89,8 @@ toPFItem commonData cInput cs = PFItem { pFItemStartDate = startDate commonData
                                        , pFItemNominal = nominal commonData
                                        , pFItemContractSpec = T.pack $ show cs }
 
-makeInput :: PFItem -> PricingForm -> IO ((DiscModel, [Model], MarketData), MContract)
-makeInput portfItem pricingForm  = do
+makeInput :: PFItem -> PricingForm -> DataProvider -> IO ((DiscModel, [Model], MarketData), MContract)
+makeInput portfItem pricingForm dataProvider  = do
   rawModelData <- mapM (getRawModelData allDays) unds
   rawQuotes <- mapM (getRawQuotes $ sDate : allDays) unds
   return ( (ConstDisc $ interestRate pricingForm
@@ -107,10 +106,12 @@ makeInput portfItem pricingForm  = do
       unds  = underlyings cMeta
       convertDate (u, d, v) = (u, day2ContrDate d, v)
       allDays = map contrDate2Day (allDates cMeta)
+      getRawModelData = provideModelData dataProvider
+      getRawQuotes = provideQuotes dataProvider
 
 
-valuate pricingForm portfItem = do
-  (inp, contr) <- makeInput portfItem pricingForm
+valuate pricingForm dataProvider portfItem = do
+  (inp, contr) <- makeInput portfItem pricingForm dataProvider
   let iter = DataConf { monteCarloIter =  (iterations pricingForm) }
       nominal_ = (fromIntegral (pFItemNominal portfItem))
   [val] <- runPricing iter [inp] contr
