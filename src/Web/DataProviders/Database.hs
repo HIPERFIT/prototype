@@ -47,20 +47,13 @@ getClosestQuote und d = do
     [Entity k (DbQuotes und _ v)] -> DbQuotes und d v
 
 getRawModelData :: [Day] -> String -> IO [RawModelData]
-getRawModelData ds und  = mapM ((liftM dbQuotesToRaw) . (getClosestQuote und)) ds
+getRawModelData ds und  = mapM ((liftM dbMdToRaw) . (getClosestMd und)) ds
 
 getClosestMd und d = do
   res <- runDb $ selectList [DbModelDataUnderlying ==. (pack und), DbModelDataDate <=. d] [Desc DbModelDataDate, LimitTo 1]
   return $ case res of
     [] -> error ("No quote for " ++ show d)
     [Entity k (DbModelData und _ v)] -> DbModelData und d v
-
-getClosestModelData und d = do
-  res <- runDb $ selectList [DbQuotesUnderlying ==. (pack und), DbQuotesDate <=. d] [Desc DbQuotesDate, LimitTo 1]
-  return $ case res of
-    [] -> error ("No quote for " ++ show d)
-    [Entity k (DbQuotes und _ v)] -> DbQuotes und d v
-
 
 getStoredQuotes :: IO [RawQuotes]
 getStoredQuotes = do 
