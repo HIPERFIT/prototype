@@ -9,6 +9,7 @@ compile_opencl:
 	make -C $(PRICING_ENGINE) clean gpu
 
 build_examples: 
+	cabal configure
 	cabal build tests
 
 run_examples:
