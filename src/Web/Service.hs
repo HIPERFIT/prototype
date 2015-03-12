@@ -9,18 +9,20 @@ import DataProviders.Common
 import CodeGen.DataGen hiding (startDate)
 import Contract
 import Contract.Expr
+import Contract.Transform
 import TypeClass
 import Data
 import PersistentData
 import DB
 import Serialization
 import Utils
+import CodeGen.Utils
 
 import Web.Scotty hiding (body, params)
-import Web.Scotty.Internal.Types
-import Network.Wai.Middleware.Static
+import Web.Scotty.Internal.Types hiding (Env)
+import Network.Wai.Middleware.Static (staticPolicy, addBase)
 import CSS
-import Data.Aeson (object, (.=), FromJSON(..), decode, eitherDecode, Value (..))
+import Data.Aeson (object, (.=), FromJSON(..), decode, eitherDecode, Value (..), encode)
 import Control.Monad.Trans
 import qualified Data.Map as M
 import qualified Data.ByteString.Lazy.Char8 as BL
@@ -32,38 +34,60 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text as T
 import qualified Database.Persist as P
 import Database.Persist.Sql (toSqlKey, fromSqlKey)
+import Data.Time (Day, diffDays)
+import Data.Text (Text)
+import Data.Maybe
 
 instance FromJSON CommonContractData
 instance FromJSON PricingForm
+instance FromJSON DataForm
 
 defaultService allContracts dataProvider = do
     get "/" $ homeView allContracts
     get (capture $ contractsBaseUrl ++ ":type") $ do
                        ty <- param "type"
                        contractView allContracts (toMap allContracts M.! ty)
-    get "/marketData/underlyings/" $ do
-      availUnd <- liftIO (storedUnderlyings dataProvider)
-      json availUnd
-    get "/marketData/view/" $ do 
-      quotes <- liftIO $ storedQuotes dataProvider
-      marketDataView quotes
-    get "/modelData/" $ do
-      md <- liftIO $ storedModelData dataProvider
-      modelDataView md
     post "/pricer/" $ do
       pricingForm <- (jsonParam "conf") :: ActionM PricingForm
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
       res <- liftIO $ mapM (valuate pricingForm dataProvider) $ map P.entityVal pItems
       json $ object [ "prices" .= map (ppDouble 4) res
                     , "total" .= (ppDouble 4 $ sum res) ]
+    get "/portfolio/" $ do
+      pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
+      portfolioView $ map fromEntity pItems
     delete "/portfolio/:id" $ do
       pfiId <- param "id"
       let key = toSqlKey (fromIntegral ((read pfiId) :: Integer)) :: P.Key PFItem
       liftIO $ runDb $ P.delete key
       text "OK"
-    get "/portfolio/" $ do
-                  pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
-                  portfolioView $ map fromEntity pItems
+    get "/marketData/underlyings/" $ do
+      availUnd <- liftIO (storedUnderlyings dataProvider)
+      json availUnd
+    get "/marketData/view/" $ do 
+      quotes <- liftIO $ storedQuotes dataProvider
+      marketDataView quotes
+    post "/marketData/" $ do
+      form <- jsonData :: ActionM DataForm
+      let md = DbQuotes (fUnderlying form) (fDate form) (fVal form)
+      liftIO $ runDb $ P.insert_ md
+      json $ object ["msg" .= ("Data added successfully" :: String)]
+    delete "/marketData/" $ do
+      key <- jsonData :: ActionM (Text, Day)
+      liftIO $ runDb $ P.deleteBy $ (uncurry QuoteEntry) key
+      text "OK"
+    get "/modelData/" $ do
+      md <- liftIO $ storedModelData dataProvider
+      modelDataView md
+    post   "/modelData/" $ do
+      form <- jsonData :: ActionM DataForm
+      let md = DbModelData (fUnderlying form) (fDate form) (fVal form)
+      liftIO $ runDb $ P.insert_ md
+      json $ object ["msg" .= ("Data added successfully" :: String)]
+    delete "/modelData/" $ do
+      key <- jsonData :: ActionM (Text, Day)
+      liftIO $ runDb $ P.deleteBy $ (uncurry MDEntry) key
+      text "OK"
     middleware $ staticPolicy (addBase "src/Web/static")
 
 api contractType inputData mkContr = 
@@ -89,32 +113,70 @@ toPFItem commonData cInput cs = PFItem { pFItemStartDate = startDate commonData
                                        , pFItemNominal = nominal commonData
                                        , pFItemContractSpec = T.pack $ show cs }
 
-makeInput :: PFItem -> PricingForm -> DataProvider -> IO ((DiscModel, [Model], MarketData), MContract)
-makeInput portfItem pricingForm dataProvider  = do
-  rawModelData <- mapM (getRawModelData allDays) unds
-  rawQuotes <- mapM (getRawQuotes $ sDate : allDays) unds
+makeInput :: MContract -> PricingForm -> DataProvider -> IO ((DiscModel, [Model], MarketData), MContract)
+makeInput mContr@(sDate, contr) pricingForm dataProvider = do
+  (modelData, marketData) <- mkData mContr pricingForm dataProvider
   return ( (ConstDisc $ interestRate pricingForm
-           , map toBS $ zip unds $ rawModelData
-           , toMarketData $ (concat rawQuotes, [])) -- ingnoring correlations for now
-         , (day2ContrDate sDate, contr) )
+           , modelData
+           , marketData) 
+         , mContr)
     where
-      toBS (und, md) = bsRiskFreeRate und (map convertDate md) (interestRate pricingForm) (day2ContrDate sDate) eDate
-      sDate = pFItemStartDate portfItem
-      contr = (read $ T.unpack $ pFItemContractSpec portfItem) :: Contract
-      cMeta = extractMeta (day2ContrDate sDate, contr)
+      currDate = fromMaybe (contrDate2Day sDate) $ currentDate pricingForm 
+      dt = fromIntegral $ diffDays currDate $ contrDate2Day sDate
+      cMeta = extractMeta mContr
+      allDays = map contrDate2Day (allDates cMeta)
+
+maybeSimplify dt env c | dt == 0   = Just c
+                       | dt > 0    = Just $ advance dt $ simplify env c
+                       | otherwise = Nothing
+
+mkData mContr@(sDate, contr) pricingForm dataProvider = do
+  rawModelData <- mapM (getRawModelData allDays) unds
+  rawQuotes <- mapM (getRawQuotes $ (contrDate2Day sDate) : allDays) unds
+  return ( map toBS $ zip unds $ rawModelData
+         , toMarketData $ (concat rawQuotes, [])) -- ingnoring correlations for now
+    where
+      toBS (und, md) = bsRiskFreeRate und (map convertDate md) (interestRate pricingForm) sDate eDate
+      cMeta = extractMeta mContr
       eDate = endDate cMeta
       unds  = underlyings cMeta
-      convertDate (u, d, v) = (u, day2ContrDate d, v)
       allDays = map contrDate2Day (allDates cMeta)
       getRawModelData = provideModelData dataProvider
       getRawQuotes = provideQuotes dataProvider
+      convertDate (u, d, v) = (u, day2ContrDate d, v)
 
+makeEnv quotes = foldr (.) id $ map f quotes
+    where
+      f (und, d, q) = addFixing (und, day2ContrDate d, q)
 
 valuate pricingForm dataProvider portfItem = do
-  (inp, contr) <- makeInput portfItem pricingForm dataProvider
+  quotesBefore <- mapM (getRawQuotes $ sDate : filter (<= currDate) allDays) unds
+  let env = (makeEnv (concat quotesBefore)) $ emptyFrom $ day2ContrDate sDate
+      simplContr = fromMaybe mZero $ maybeSimplify dt env mContr
+  (inp, contr) <- makeInput simplContr pricingForm dataProvider
   let iter = DataConf { monteCarloIter =  (iterations pricingForm) }
       nominal_ = (fromIntegral (pFItemNominal portfItem))
   [val] <- runPricing iter [inp] contr
   return $  nominal_ * val
+  where
+    currDate = fromMaybe sDate $ currentDate pricingForm 
+    dt = fromIntegral $ diffDays currDate sDate
+    sDate = pFItemStartDate portfItem
+    mZero = (day2ContrDate sDate, zero)
+    mContr = (day2ContrDate sDate, read $ T.unpack $ pFItemContractSpec portfItem)
+    cMeta = extractMeta mContr
+    allDays = map contrDate2Day (allDates cMeta)
+    unds  = underlyings cMeta      
+    getRawQuotes = provideQuotes dataProvider
 
 fromEntity p = (show $ fromSqlKey $ P.entityKey p, P.entityVal p)
+
+
+ex1a =
+    let strike = r 45
+        theobs = obs ("BASF", 0)
+        maturity = 212
+    in transl maturity (scale (maxx (theobs - strike) 0) (transfOne EUR "you" "me"))
+
+mEx1a :: MContract
+mEx1a = (read "2008-09-01", ex1a)

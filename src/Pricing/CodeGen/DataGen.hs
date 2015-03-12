@@ -148,16 +148,32 @@ datesForBB sd ds = (firstDate, dates)
 
 genBBConf numUnder startDate dates = bbridgeConf numUnder $ datesForBB startDate dates 
 
--- TODO: possibly, we should read sobol data lazily
 generateData dConf ds contr = 
   do
-    vects <- readFile "./src/Pricing/CodeGen/sobol_vect.data"
-    let cm = extractMeta contr
-        sob = take ((length $ underlyings cm) * (length $ allDates cm)) (lines vects)
-        context = genInput dConf ds sob cm
     template <- readFile "./src/Pricing/templ/InputTemplate.data"
+    context <- if (not $ null $ getObs $ snd contr) then
+                   do
+                     sob <- readSobSeq cm
+                     return $ genInput dConf ds sob cm
+               else return $ emptyContext
     return (replaceLabels context template)
+  where
+    cm = extractMeta contr
 
+-- TODO: possibly, we should read sobol data lazily
+readSobSeq contrMeta = do
+  vects <- readFile "./src/Pricing/CodeGen/sobol_vect.data"
+  return $ take ((length $ underlyings contrMeta) * (length $ allDates contrMeta)) (lines vects)
+  
+
+emptyContext = [ ("SUMMARY", genSummary 1 1 1 1)
+               , ("DIRVECT", ppDirVects $ [intercalate "," $ replicate 30 "0"])
+               , ("CORR", "[[ [0] ]]")
+               , ("MODELDATA", "[[ [0] ]] \n\n [[ [0] ]]")
+               , ("STARTPRICE", "[[ 0.0 ]]")
+               , ("DETVALS", "[[]]")
+               , ("DISCOUNTS", "[[ ]]")
+               , ("BBMETA", ppBBMeta $ genBBConf 0 (at "2008-01-01") [(at "2008-01-01")]) ]
 
 -- Pretty-printing data
 ppModelData (vols, drifts) = (sqBrBlock $ intercalate ",\n" $ map ppRows vols) ++ "\n\n" ++ 
@@ -178,4 +194,3 @@ ppCorr corrM = inSqBr $ intercalate ",\n" $ map (ppList . map (ppDouble 7)) $ M.
 ppCorrs cs = sqBrBlock $ intercalate ",\n" $ map ppCorr cs
 
 sqBrBlock = inSqBr . surroundBy "\n"
-

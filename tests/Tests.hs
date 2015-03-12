@@ -276,7 +276,9 @@ hUnitTestPricing (inputData, mContr, refPrice) isVerbose =
     TestCase (
               do 
                 [price] <- runPricing dataConf inputData mContr
-                assertBool ("Error is more than " ++ (ppDouble 3 (eps * 100)) ++ "%")
+                assertBool ("Error is more than " ++ (ppDouble 3 (eps * 100)) ++ "%"  ++ 
+                            "\nCurrent value: " ++ (show price) ++ 
+                            "\nShould be:     " ++ (show refPrice))
                            (eqUptoEps price refPrice eps)
                 if isVerbose then (verboseOut price) else putStr ""
              )

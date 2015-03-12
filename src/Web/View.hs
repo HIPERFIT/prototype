@@ -64,7 +64,9 @@ layout t activeMenuItem pageContent = docTypeHtml $ do
                  link ! href "//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.1/css/datepicker3.min.css" ! rel "stylesheet" ! media "screen"
                  style $ pet $ toStrict layoutCss
                  body $ do
+                        script ! src "//cdnjs.cloudflare.com/ajax/libs/spin.js/2.0.1/spin.min.js" $ mempty
                         script ! src "//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" $ mempty
+                        script ! src "//cdnjs.cloudflare.com/ajax/libs/spin.js/2.0.1/jquery.spin.min.js" $ mempty
                         script ! src "//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.1/js/bootstrap-datepicker.min.js" $ mempty
                         script ! src "/js/main.js" $ mempty
                         script ! src "//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js" $ mempty
@@ -120,70 +122,91 @@ buildMenuItem activeItem (label, url) =
       link = a ! href (stringValue url) $ string label
 
 buildForm dataDescr = form ! id "mainForm" ! dataAttribute "url" (stringValue $ url dataDescr) $ do
-                        fieldset ! class_ "common-data" $ mconcat $ map field commonFields
-                        fieldset ! class_ "contract-data" $ mconcat $ map field formData
+                        fieldset ! class_ "common-data" $ mconcat $ map labeledField commonFields
+                        fieldset ! class_ "contract-data" $ mconcat $ map labeledField formData
     where
       formData = params dataDescr
       commonFields = gtoForm (Proxy :: Proxy (Rep CommonContractData))
 
 marketDataView :: [RawQuotes] -> ActionM ()
 marketDataView quotes = blaze $ layout "Market Data" (Just (snd marketDataMenuItem)) $
-                   buildTable (headerRow, map toRow quotes)
+                   buildTable (buildThead headerRow, buildTbody $ (fields ++ [addBtn]) : map toRow quotes)
     where
-      headerRow = ["Underlying", "Date", "Price"]
-      toRow (und, date, price) = [string und, string $ formatDate date, string $ show price]
+      headerRow = ["Underlying", "Date", "Price", ""]
+      toRow (und, d, vol) = [string und, string $ formatDate d, string $ ppDouble 3 vol, delLink und d]
+      fields = map field $ gtoForm (Proxy :: Proxy (Rep DataForm))
+      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "add-data" ! href "/marketData/" $ "Add"
+      delLink und d = a ! dataAttribute "und" (stringValue und) ! dataAttribute "date" (stringValue (formatDate d))
+                        ! href "/marketData/" ! class_ "del-item" $ i ! class_ "glyphicon glyphicon-trash" $ ""
+      
 
 portfolioView portfolio = blaze $ layout "My Portfolio" (Just (snd myPortfolioMenuItem)) $ do
                             div ! class_ "row" $ do
-                                div ! class_ "col-sm-8" $ buildTable (headerRow, (map pItemRow portfolio) ++ [totalRow])
+                                div ! class_ "col-sm-8" $ buildTable (buildThead headerRow, buildTbody $ (map pItemRow portfolio) ++ [totalRow])
                                 div ! class_ "col-sm-4" $ do
                                                    pricingForm
                                                    a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run valuation"
     where
-      headerRow =  ["Nominal", "Contract", "Date", "Value", ""]
-      pItemRow (k, p) = [string $ show $ pFItemNominal p, text $ pFItemContractType p, string $ formatDate $ pFItemStartDate p,
-                         h4 $ span ! class_ "price-output label label-info" $ "", a ! dataAttribute "id" (stringValue k) ! href "#" ! class_ "del-item" $
-                              i ! class_ "glyphicon glyphicon-trash" $ ""]
+      headerRow = ["Nominal", "Contract", "Date", "Value", ""]
+      pItemRow (k, p) = [ string $ show $ pFItemNominal p
+                        , text $ pFItemContractType p, string $ formatDate $ pFItemStartDate p
+                        , h4 $ do
+                            span ! class_ "price-output label label-info" $ ""
+                            span ! class_ "processing-label label label-warning" $ "Not valuated"
+                            span ! class_ "spinner" $ ""
+                        , a ! dataAttribute "id" (stringValue k) ! href "#" ! class_ "del-pfitem" $
+                          i ! class_ "glyphicon glyphicon-trash" $ "" ]
       totalRow = ["Total", "", "", h4 $ span ! class_ "total-output label label-success" $ "", ""]
 
 modelDataView md = do
   blaze $ layout "Model Data" (Just (snd modelDataMenuItem)) $
-                   buildTable (headerRow, map toRow md)
-    where
-      headerRow = ["Underlying", "Date", "Volatility"]
-      toRow (und, d, vol) = [string und, string $ formatDate d, string $ ppDouble 3 vol]
+        buildTable (buildThead headerRow, buildTbody $ (fields ++ [addBtn]) : map toRow md)
+   where
+     headerRow = ["Underlying", "Date", "Volatility", ""]
+     toRow (und, d, vol) = [string und, string $ formatDate d, string $ ppDouble 3 vol, delLink und d]
+     fields = map field $ gtoForm (Proxy :: Proxy (Rep DataForm))
+     addBtn = a ! class_ "btn btn-lg btn-primary" ! id "add-data" ! href "/modelData/" $ "Add"
+     delLink und d = a ! dataAttribute "und" (stringValue und) ! dataAttribute "date" (stringValue (formatDate d))
+                       ! href "/modelData/" ! class_ "del-item" $ i ! class_ "glyphicon glyphicon-trash" $ ""
+          
+buildTable (tblHead, tblBody) = table ! class_ "table table-striped" $ do
+                                  tblHead
+                                  tblBody
 
-buildTable (headers, rows) = table ! class_ "table table-striped" $ do
-                                thead $ tr $ mconcat $ map th headers
-                                tbody $ mconcat $ map tr $ map row rows
+buildThead hs = tr $ mconcat $ map th hs
+
+buildTbody rows = mconcat $ map tr $ map row rows
     where
       row xs = mconcat $ map (td ! class_ "vert-align fixed-height") xs
 
-pricingForm = mconcat $ map field $ gtoForm (Proxy :: Proxy (Rep PricingForm))
+pricingForm = mconcat $ map labeledField $ gtoForm (Proxy :: Proxy (Rep PricingForm))
+
+labeledField :: (String, TypeRep) -> Html
+labeledField (name, tr) = div ! class_ "form-group" $ do
+                            label $ string $ capFirst name
+                            field (name, tr)
 
 field :: (String, TypeRep) -> Html
-field (name, tr) | tr == typeOf (undefined :: Double) ||
-                   tr == typeOf (undefined :: Int)        = numField name name
-                 | tr == typeOf (undefined :: Day)        = dateField name name
-                 | tr == typeOf (undefined :: Underlying) = selectField name name
+field (name, tr) | tr == typeOf (undefined :: Double) ||  tr == typeOf (undefined :: Int)  = numField name
+                 -- possibly, we should add support for Maybe for other type of fields
+                 | tr == typeOf (undefined :: Day) || tr == typeOf (undefined :: Maybe Day)  = dateField name 
+                 | tr == typeOf (undefined :: Underlying) = selectField name
+                 | tr == typeOf (undefined :: T.Text)     = textField name
 
-numField :: String -> String -> Html
-numField fName fLabel = div ! class_ "form-group" $ do
-                              label $ string fLabel
-                              input ! type_ "text" ! class_ "form-control" ! name (stringValue fName) 
-                                    ! dataAttribute "datatype" "Double"
+numField :: String -> Html
+numField fName  = input ! type_ "text" ! class_ "form-control" ! name (stringValue fName) 
+                              ! dataAttribute "datatype" "Double"
 
-dateField :: String -> String -> Html
-dateField fName fLabel = div ! class_ "form-group" $ do
-                           label $ string fLabel
-                           div ! class_ "input-group date" ! id (stringValue (fName ++ "Picker")) $ 
-                               do
-                                 input ! type_ "text" ! class_ "form-control" ! name (stringValue fName)
-                                 span ! class_ "input-group-addon" $ 
-                                      i ! class_ "glyphicon glyphicon-calendar" $ ""
+dateField :: String -> Html
+dateField fName = div ! class_ "input-group date" ! id (stringValue (fName ++ "Picker")) $ 
+                         do
+                           input ! type_ "text" ! class_ "form-control" ! name (stringValue fName)
+                           span ! class_ "input-group-addon" $ 
+                                i ! class_ "glyphicon glyphicon-calendar" $ ""
 
-selectField :: String -> String -> Html
-selectField fName fLabel = div ! class_ "form-group" $ do
-                                  label $ string fLabel
-                                  select ! class_ "form-control selectpicker" ! name (stringValue fName)
-                                         ! dataAttribute "datatype" "Underlying" $ ""
+selectField :: String -> Html
+selectField fName = select ! class_ "form-control selectpicker" ! name (stringValue fName)
+                                  ! dataAttribute "datatype" "Underlying" $ ""
+
+textField :: String -> Html
+textField fName = input ! type_ "text" ! class_ "form-control" ! name (stringValue fName)

@@ -15,4 +15,18 @@ PFItem
    startDate    Day
    contractSpec Text
    deriving Show Generic
+
+DbQuotes
+   underlying  Text
+   date        Day
+   value       Double
+   QuoteEntry  underlying date
+   deriving Show Generic
+
+DbModelData
+   underlying  Text
+   date        Day
+   value       Double
+   MDEntry     underlying date
+   deriving Show Generic
 |]

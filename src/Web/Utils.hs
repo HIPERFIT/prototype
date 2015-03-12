@@ -6,6 +6,7 @@ import System.Locale (defaultTimeLocale)
 import Data.Time (Day)
 import Data.Time.Format (readTime, formatTime)
 import Data.List
+import Data.Char (toUpper)
 
 
 -- remove spaces from both ends of string
@@ -22,3 +23,5 @@ parseDate = readTime defaultTimeLocale dateFormat
 formatDate = formatTime defaultTimeLocale dateFormat
 
 dateFormat = "%Y-%m-%d"
+
+capFirst (x:xs) = toUpper x : xs

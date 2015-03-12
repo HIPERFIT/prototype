@@ -5,6 +5,7 @@ module DataProviders.Database where
 import DB
 import DataProviders.Data
 import qualified DataProviders.Csv as Csv
+import PersistentData
 
 import Data.Time
 import Data.Text (Text, unpack, pack)
@@ -14,20 +15,6 @@ import Database.Persist.Sql (rawSql, Single, unSingle)
 import GHC.Generics
 import Control.Monad (forM, liftM)
 import Control.Monad.Trans (lift)
-
-share [mkPersist sqlSettings, mkMigrate "migrateMarketAndModelData"] [persistLowerCase|
-DbQuotes
-   underlying  Text
-   date        Day
-   value       Double
-   deriving Show Generic
-
-DbModelData
-   underlying  Text
-   date        Day
-   value       Double
-   deriving Show Generic
-|]
 
 dbDataProvider = DataProvider { provideQuotes     = getRawQuotes
                               , provideCorrs      = undefined

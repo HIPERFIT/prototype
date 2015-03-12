@@ -2,10 +2,13 @@ function collectData (ins) {
     var res = {};
     var v;
     $.each(ins, function (i, x) {
-        if ($(x).data('datatype') === 'Double') { 
-            v = parseFloat($(x).val());
-        } else v = $(x).val();
-        res[$(x).attr('name')] = v;
+        var $x = $(x);
+        if ($x.val() !== "") {
+            if ($x.data('datatype') === 'Double') { 
+                v = parseFloat($(x).val());
+            } else v = $x.val();
+            res[$x.attr('name')] = v;
+        }
     });
     return res;
 }
@@ -18,17 +21,29 @@ function populateSelect ($sel, opts) {
 }
 
 function displayPrices ($cells, prices) {
-    $cells.each(function(i,v) { 
-        $(v).html(prices[i])
+    $cells.each(function(i,v) {
+        var $v = $(v);
+        $v.html(prices[i]);
     });
+}
+
+function processing (run) {
+    var $spinner = $('.spinner');
+    var $label = $('.processing-label');
+    if (run) {
+        $label.html('Processing...');
+        $spinner.spin({width: 3, radius: 5, length: 5});
+    } else {
+        $spinner.spin(false);
+        $label.empty();
+    }
 }
 
 $(document).ready(function() {
     $('.selectpicker').selectpicker();
-    $('#startDatePicker, #endDatePicker')
-        .datepicker({autoclose: true,
-                     todayHighlight:true, 
-                     format: 'yyyy-mm-dd'});
+    $('.date').datepicker({autoclose: true,
+                           todayHighlight:true, 
+                           format: 'yyyy-mm-dd'});
     $('#add').click(function() {
         $('#result').empty().hide();
         $('#error').empty().hide();
@@ -45,8 +60,11 @@ $(document).ready(function() {
                 $('#error').html(jqXHR.responseText);
                 $('#error').show();
             })
-    })
+    });
     $('#run').click(function() {
+        $('.price-output').empty();
+        $('.total-output').empty();
+        processing(true);
         var data = collectData($('.form-control'));
         var url = '/pricer/';
         $.post(url, { 'conf' : JSON.stringify(data) })
@@ -58,9 +76,10 @@ $(document).ready(function() {
                 $('#error').html(jqXHR.responseText);
                 $('#error').show();
             })
+            .always(function() {processing(false)});
     });
     $.get('/marketData/underlyings/', function (data) {populateSelect($("select[data-datatype='Underlying']"), data)});
-    $('.del-item').click(function() {
+    $('.del-pfitem').click(function() {
         $.ajax({
             type: 'DELETE',
             url: '/portfolio/' + $(this).data('id')
@@ -68,5 +87,40 @@ $(document).ready(function() {
         .done(function() {
             location.reload();
         });
+    });
+    $('.del-item').click(function(evt) {
+        evt.preventDefault();
+        var data = [ 
+             $(this).data('und'), 
+             $(this).data('date')
+        ];
+        $.ajax({
+            type: 'DELETE',
+            url: $(this).attr('href'),
+            data: JSON.stringify(data)
+        })
+         .done(function() {
+             location.reload();
+         })
+         .fail(function(jqXHR, textStatus, errorThrown) {
+             $('#error').html(jqXHR.responseText);
+             $('#error').show();
+         });
+    });
+    $('#add-data').click(function(evt) {
+        evt.preventDefault();
+        $('#result').empty().hide();
+        $('#error').empty().hide();
+        var url = $(this).attr('href');
+        var data = collectData($('#add-data').closest('tr').find('.form-control'));
+        $.post(url, JSON.stringify(data))
+            .done(function(resp) { $('#result').html(resp.msg);
+                                   $('#result').show();
+                                   location.reload();
+                                 })
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                $('#error').html(jqXHR.responseText);
+                $('#error').show();
+            })
     })
 });
