@@ -11,6 +11,7 @@ import Contract.Expr
 import Contract.Type
 import Contract.Environment
 import Contract.Transform
+import Contract.Analysis
 import TypeClass
 import Data
 import PersistentData
@@ -35,7 +36,7 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text as T
 import qualified Database.Persist as P
 import Database.Persist.Sql (toSqlKey, fromSqlKey)
-import Data.Time (Day, diffDays)
+import Data.Time (Day, diffDays, addDays)
 import Data.Text (Text)
 import Data.Maybe
 
@@ -56,7 +57,7 @@ defaultService allContracts dataProvider = do
                     , "total"  .= (sum $ map (fromMaybe 0) res) ]
     get "/portfolio/" $ do
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
-      portfolioView $ map fromEntity pItems
+      portfolioView $ map (withHorizon . fromEntity) pItems
     delete "/portfolio/:id" $ do
       pfiId <- param "id"
       let key = toSqlKey (fromIntegral ((read pfiId) :: Integer)) :: P.Key PFItem
@@ -176,3 +177,7 @@ valuate pricingForm dataProvider portfItem = do
     getRawQuotes = provideQuotes dataProvider
 
 fromEntity p = (show $ fromSqlKey $ P.entityKey p, P.entityVal p)
+
+withHorizon (key, enity) = (key, enity, addDays days $ pFItemStartDate enity) 
+    where
+      days = fromIntegral $ horizon $ read $ T.unpack $ pFItemContractSpec enity

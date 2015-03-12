@@ -147,16 +147,18 @@ portfolioView portfolio = blaze $ layout "My Portfolio" (Just (snd myPortfolioMe
                                                    pricingForm
                                                    a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run valuation"
     where
-      headerRow = ["Nominal", "Contract", "Date", "Value", ""]
-      pItemRow (k, p) = [ string $ show $ pFItemNominal p
-                        , text $ pFItemContractType p, string $ formatDate $ pFItemStartDate p
-                        , h4 $ do
-                            span ! class_ "price-output label label-info" $ ""
-                            span ! class_ "processing-label label label-warning" $ "Not valuated"
-                            span ! class_ "spinner" $ ""
-                        , a ! dataAttribute "id" (stringValue k) ! href "#" ! class_ "del-pfitem" $
-                          i ! class_ "glyphicon glyphicon-trash" $ "" ]
-      totalRow = ["Total", "", "", h4 $ span ! class_ "total-output label label-success" $ "", ""]
+      headerRow = ["Nominal", "Contract", "Start", "Horizon", "Value", ""]
+      pItemRow (k, p, hz) = [ string $ show $ pFItemNominal p
+                            , text $ pFItemContractType p
+                            , string $ formatDate $ pFItemStartDate p
+                            , string $ formatDate $ hz
+                            , h4 $ do
+                                span ! class_ "price-output label label-info" $ ""
+                                span ! class_ "processing-label label label-warning" $ "Not valuated"
+                                span ! class_ "spinner" $ ""
+                            , a ! dataAttribute "id" (stringValue k) ! href "#" ! class_ "del-pfitem" $
+                              i ! class_ "glyphicon glyphicon-trash" $ "" ]
+      totalRow = ["Total", "", "", "", h4 $ span ! class_ "total-output label label-success" $ "", ""]
 
 modelDataView md = do
   blaze $ layout "Model Data" (Just (snd modelDataMenuItem)) $

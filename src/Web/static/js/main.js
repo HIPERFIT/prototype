@@ -80,7 +80,7 @@ $(document).ready(function() {
         $.post(url, { 'conf' : JSON.stringify(data) })
             .done(function(resp) { 
                 displayPrices($('.price-output'), resp.prices);
-                $('.total-output').html(resp.total);
+                $('.total-output').html(resp.total.toFixed(4));
             })
             .fail(function(jqXHR, textStatus, errorThrown) {
                 $('#error').html(jqXHR.responseText);
