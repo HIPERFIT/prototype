@@ -11,7 +11,6 @@ import Data.Data
 import Data.Proxy
 import GHC.Generics
 import CodeGen.DataGen
-import Contract
 import PersistentData
 
 {-

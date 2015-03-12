@@ -16,8 +16,8 @@ extra-source-files:  README
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Contract, Contract.Expr, Contract.Type, Contract.Date, Pricing, Config, SmallContract, MediumContract, CodeGen.DataGen, CodeGen.BBridgeGen, CodeGen.Utils, CodeGen.OpenclGen, CodeGen.Syntax, Contract.Transform
-  other-modules:       LexifiContracts, Contract.FXInstrument, Contract.Environment, Contract.Hash, Contract.Analysis, ProcessUtils
+  exposed-modules:     Contract, Contract.Expr, Contract.Type, Contract.Date, Pricing, Config, SmallContract, MediumContract, CodeGen.DataGen, CodeGen.BBridgeGen, CodeGen.Utils, CodeGen.OpenclGen, CodeGen.Syntax, Contract.Transform, Contract.Environment
+  other-modules:       LexifiContracts, Contract.FXInstrument, Contract.Hash, Contract.Analysis, ProcessUtils, Contract.ExprIO
   other-extensions:    DataKinds, GADTs
   build-depends:       base >=4.6
                      , bytestring >= 0.10.4.0

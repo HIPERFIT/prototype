@@ -7,8 +7,9 @@ import Pricing (runPricing)
 import DataProviders.Data
 import DataProviders.Common
 import CodeGen.DataGen hiding (startDate)
-import Contract
 import Contract.Expr
+import Contract.Type
+import Contract.Environment
 import Contract.Transform
 import TypeClass
 import Data

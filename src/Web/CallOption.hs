@@ -3,7 +3,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 module CallOption (CallOption, callOption, makeContract) where
 
-import Contract hiding (i)
+import Contract.Expr
+import Contract.Type
 import Contract.Date
 import Data.Time
 import qualified Data.Map as M

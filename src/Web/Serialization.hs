@@ -3,17 +3,13 @@
 {-# LANGUAGE GADTs, FlexibleInstances, StandaloneDeriving #-}
 module Serialization where
 
---import Data.Serialize
 import Contract.Expr
-import Contract
 import Contract.Type
 import Data.Word
 import Data.Data
 import qualified Data.ByteString.Lazy.Char8 as BL
 import Text.Read
 
-
--- !!! TODO !!! Do something with show/read instances in Constract.Expr
 deriving instance Read AOp
 deriving instance Read Contract
 

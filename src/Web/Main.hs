@@ -15,6 +15,7 @@ import Data.Time
 import Web.Scotty hiding (body, params)
 import Data.Aeson (FromJSON)
 import qualified Database.Persist.Sql as P
+import System.Environment (getArgs)
 
 instance FromJSON CO.CallOption
 instance FromJSON RO.RainbowOption
@@ -23,7 +24,16 @@ allContracts = [CO.callOption, RO.rainbowOption]
 
 main = do
   runDb $ P.runMigration migrateTables
-  scotty 3000 $ do
+  port <- getPortOrDefault
+  scotty port $ do
     api "callOption"    (jsonContract :: ActionM CO.CallOption) CO.makeContract
     api "rainbowOption" (jsonContract :: ActionM RO.RainbowOption) RO.makeContract
     defaultService allContracts dbDataProvider
+
+defaultPort = 3000
+getPortOrDefault = do
+  args <- getArgs
+  return $ case args of
+             []     -> defaultPort
+             [port] -> read port
+             _      -> error "Wrong number of arguments"
