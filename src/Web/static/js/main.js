@@ -20,8 +20,9 @@ function populateSelect ($sel, opts) {
     $sel.selectpicker("refresh");
 }
 
-function resetStyles ($sel) {
-    $sel.removeClass('label-warning').addClass('label-info');
+function resetStyles () {
+    $('.price-output').removeClass('label-warning').addClass('label-info');
+    $('.total-output').removeClass('label-warning').addClass('label-success');
 }
 
 function displayPrices ($cells, prices) {
@@ -48,6 +49,19 @@ function processing (run) {
     }
 }
 
+function invalidateResult ($sel) {
+    // trying to determine whether valuation has been done at least once
+    if (!$('.total-output').is(':empty')) {
+        $sel.removeClass('label-info').addClass('label-warning');
+        $('#pricing-form-alert').html('Parameters have been changed. Please run valuation.');
+        $('#pricing-form-alert').show();
+    }
+}
+
+function hideAlerts() {
+    $('#pricing-form-alert, #error, #result').empty().hide();
+}
+
 $(document).ready(function() {
     $('.selectpicker').selectpicker();
     $('.date').datepicker({autoclose: true,
@@ -71,7 +85,8 @@ $(document).ready(function() {
             })
     });
     $('#run').click(function() {
-        resetStyles($('.price-output'));
+        resetStyles();
+        hideAlerts();
         $('.price-output').empty();
         $('.total-output').empty();
         processing(true);
@@ -133,4 +148,6 @@ $(document).ready(function() {
                 $('#error').show();
             })
     })
+    $('input[name="currentDate"], input[name="interestRate"]').keydown(function() {invalidateResult($('.price-output, .total-output'))});
+    $('input[name="currentDate"]').change(function() {invalidateResult($('.price-output, .total-output'))});
 });

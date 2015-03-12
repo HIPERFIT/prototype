@@ -15,5 +15,6 @@ layoutCss = render $ do
               element ".spinner" ? (position relative)
               element "#result" ? (display none)
               element "#error" ? (display none)
+              element "#pricing-form-alert" ? (display none)
               element ".table" |> tbody |> tr |> element "td.vert-align" ? verticalAlign middle 
               element ".table" |> tbody |> tr |> element "td.fixed-height" ? (height $ px 60)

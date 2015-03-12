@@ -146,6 +146,7 @@ portfolioView portfolio = blaze $ layout "My Portfolio" (Just (snd myPortfolioMe
                                 div ! class_ "col-sm-4" $ do
                                                    pricingForm
                                                    a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run valuation"
+                                                   div ! class_ "alert alert-warning" ! id "pricing-form-alert" $ ""
     where
       headerRow = ["Nominal", "Contract", "Start", "Horizon", "Value", ""]
       pItemRow (k, p, hz) = [ string $ show $ pFItemNominal p
