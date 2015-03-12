@@ -20,10 +20,19 @@ function populateSelect ($sel, opts) {
     $sel.selectpicker("refresh");
 }
 
+function resetStyles ($sel) {
+    $sel.removeClass('label-warning').addClass('label-info');
+}
+
 function displayPrices ($cells, prices) {
     $cells.each(function(i,v) {
         var $v = $(v);
-        $v.html(prices[i]);
+        if (prices[i] !== null) {
+            $v.html(prices[i].toFixed(4));
+        } else {
+            $v.removeClass('label-info').addClass('label-warning');
+            $v.html('Not available');
+        }
     });
 }
 
@@ -62,6 +71,7 @@ $(document).ready(function() {
             })
     });
     $('#run').click(function() {
+        resetStyles($('.price-output'));
         $('.price-output').empty();
         $('.total-output').empty();
         processing(true);

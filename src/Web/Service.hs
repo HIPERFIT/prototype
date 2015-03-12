@@ -50,9 +50,9 @@ defaultService allContracts dataProvider = do
     post "/pricer/" $ do
       pricingForm <- (jsonParam "conf") :: ActionM PricingForm
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
-      res <- liftIO $ mapM (valuate pricingForm dataProvider) $ map P.entityVal pItems
-      json $ object [ "prices" .= map (ppDouble 4) res
-                    , "total" .= (ppDouble 4 $ sum res) ]
+      res <- liftIO $ mapM (maybeValuate pricingForm dataProvider) $ map P.entityVal pItems
+      json $ object [ "prices" .= res
+                    , "total"  .= (sum $ map (fromMaybe 0) res) ]
     get "/portfolio/" $ do
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
       portfolioView $ map fromEntity pItems
@@ -126,10 +126,6 @@ makeInput mContr@(sDate, contr) pricingForm dataProvider = do
       cMeta = extractMeta mContr
       allDays = map contrDate2Day (allDates cMeta)
 
-maybeSimplify dt env c | dt == 0   = Just c
-                       | dt > 0    = Just $ advance dt $ simplify env c
-                       | otherwise = Nothing
-
 mkData mContr@(sDate, contr) pricingForm dataProvider = do
   rawModelData <- mapM (getRawModelData allDays) unds
   rawQuotes <- mapM (getRawQuotes $ (contrDate2Day sDate) : allDays) unds
@@ -149,10 +145,19 @@ makeEnv quotes = foldr (.) id $ map f quotes
     where
       f (und, d, q) = addFixing (und, day2ContrDate d, q)
 
+maybeValuate :: PricingForm -> DataProvider -> PFItem -> IO (Maybe Double)
+maybeValuate pricingForm dataProvider portfItem = if (dt >= 0) then
+                                                      do v <- valuate pricingForm dataProvider portfItem
+                                                         return $ Just v
+                                                  else return Nothing
+    where
+      currDate = fromMaybe (pFItemStartDate portfItem) $ currentDate pricingForm
+      dt = fromIntegral $ diffDays currDate $ pFItemStartDate portfItem
+
 valuate pricingForm dataProvider portfItem = do
   quotesBefore <- mapM (getRawQuotes $ sDate : filter (<= currDate) allDays) unds
   let env = (makeEnv (concat quotesBefore)) $ emptyFrom $ day2ContrDate sDate
-      simplContr = fromMaybe mZero $ maybeSimplify dt env mContr
+      simplContr = advance dt $ simplify env mContr
   (inp, contr) <- makeInput simplContr pricingForm dataProvider
   let iter = DataConf { monteCarloIter =  (iterations pricingForm) }
       nominal_ = (fromIntegral (pFItemNominal portfItem))
@@ -170,13 +175,3 @@ valuate pricingForm dataProvider portfItem = do
     getRawQuotes = provideQuotes dataProvider
 
 fromEntity p = (show $ fromSqlKey $ P.entityKey p, P.entityVal p)
-
-
-ex1a =
-    let strike = r 45
-        theobs = obs ("BASF", 0)
-        maturity = 212
-    in transl maturity (scale (maxx (theobs - strike) 0) (transfOne EUR "you" "me"))
-
-mEx1a :: MContract
-mEx1a = (read "2008-09-01", ex1a)
