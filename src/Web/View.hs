@@ -9,6 +9,7 @@ import Data
 import TypeClass
 import CodeGen.DataGen (ppDouble)
 import PersistentData
+import qualified DB
 
 import Data.Time
 import Web.Scotty hiding (body, params, text)
@@ -32,9 +33,10 @@ import Text.Blaze.Internal (preEscapedText, string, text)
 import Text.Blaze (stringValue)
 import qualified Data.Text as T
 import Data.Data
+import Data.Monoid (mempty, mconcat)
 import GHC.Generics (Rep, Generic)
 import Control.Monad (forM_)
-import Data.Monoid (mconcat, mempty)
+
 
 menuItems = [instrumentsMenuItem, myPortfolioMenuItem, marketDataMenuItem, modelDataMenuItem]
 instrumentsMenuItem = ("Instruments", "/")
@@ -78,7 +80,8 @@ layout t activeMenuItem pageContent = docTypeHtml $ do
                           pageContent
 
 contractView :: [ContractGUIRepr] -> ContractGUIRepr -> ActionM ()
-contractView allContracts currentContract = blaze $ layout "Financial contracts" Nothing $ do
+contractView allContracts currentContract =
+  blaze $ layout "Financial contracts" Nothing $ do
                                               div ! class_ "row" $ do
                                                 div ! class_ "col-sm-4" $ leftPanel allContracts
                                                 div ! class_ "col-sm-8" $ rightPanel currentContract
@@ -112,6 +115,7 @@ navBar activeMenuItem = div ! class_ "navbar navbar-default" $ do
                                             a ! class_ "navbar-brand" ! href "#" $ "λ"
              div ! class_ "navbar-collapse collapse" $ ul ! class_ "nav navbar-nav" $
                  mconcat $ map (buildMenuItem activeMenuItem) menuItems
+           h4 ! class_ "navbar-text navbar-right user-info" $ span ! class_ "label label-default" $ "User: hiperfit"
 
 buildMenuItem activeItem (label, url) = 
     case activeItem of

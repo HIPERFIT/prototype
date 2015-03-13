@@ -24,6 +24,8 @@ allContracts = [CO.callOption, RO.rainbowOption]
 
 main = do
   runDb $ P.runMigration migrateTables
+  createDefaultUser
+  createDefaultPortfolio
   port <- getPortOrDefault
   scotty port $ do
     api "callOption"    (jsonContract :: ActionM CO.CallOption) CO.makeContract

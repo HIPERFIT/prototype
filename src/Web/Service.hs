@@ -26,6 +26,7 @@ import Network.Wai.Middleware.Static (staticPolicy, addBase)
 import CSS
 import Data.Aeson (object, (.=), FromJSON(..), decode, eitherDecode, Value (..), encode)
 import Control.Monad.Trans
+import Control.Monad (when)
 import qualified Data.Map as M
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.ByteString as W
@@ -71,7 +72,7 @@ defaultService allContracts dataProvider = do
       marketDataView quotes
     post "/marketData/" $ do
       form <- jsonData :: ActionM DataForm
-      let md = DbQuotes (fUnderlying form) (fDate form) (fVal form)
+      let md = DbQuotes (fUnderlying form) (fDate form) (fVal form) (toSqlKey (fromIntegral defaultUserId))
       liftIO $ runDb $ P.insert_ md
       json $ object ["msg" .= ("Data added successfully" :: String)]
     delete "/marketData/" $ do
@@ -83,7 +84,7 @@ defaultService allContracts dataProvider = do
       modelDataView md
     post   "/modelData/" $ do
       form <- jsonData :: ActionM DataForm
-      let md = DbModelData (fUnderlying form) (fDate form) (fVal form)
+      let md = DbModelData (fUnderlying form) (fDate form) (fVal form) (toSqlKey (fromIntegral defaultUserId))
       liftIO $ runDb $ P.insert_ md
       json $ object ["msg" .= ("Data added successfully" :: String)]
     delete "/modelData/" $ do
@@ -113,7 +114,8 @@ jsonContract = jsonParam ("contractData" :: TL.Text)
 toPFItem commonData cInput cs = PFItem { pFItemStartDate = startDate commonData
                                        , pFItemContractType = TL.toStrict $ TL.pack $ show $ typeOf cInput
                                        , pFItemNominal = nominal commonData
-                                       , pFItemContractSpec = T.pack $ show cs }
+                                       , pFItemContractSpec = T.pack $ show cs
+                                       , pFItemPortfolioId = toSqlKey $ fromIntegral defaultPortfolioId}
 
 makeInput :: MContract -> PricingForm -> DataProvider -> IO ((DiscModel, [Model], MarketData), MContract)
 makeInput mContr@(sDate, contr) pricingForm dataProvider = do
@@ -181,3 +183,15 @@ fromEntity p = (show $ fromSqlKey $ P.entityKey p, P.entityVal p)
 withHorizon (key, enity) = (key, enity, addDays days $ pFItemStartDate enity) 
     where
       days = fromIntegral $ horizon $ read $ T.unpack $ pFItemContractSpec enity
+
+createDefaultUser = createIfNotExist (defaultUserId, User "hiperfit" "123")
+  
+createDefaultPortfolio = createIfNotExist (defaultPortfolioId, Portfolio "HIPERFIT" (toSqlKey $ fromIntegral defaultUserId))
+
+createIfNotExist (entId, ent) = do
+    let key = toSqlKey $ fromIntegral entId
+    ent_ <- runDb $ P.get key
+    let exist = case ent_ of
+                   Just _ -> False
+                   Nothing -> True
+    when exist $ runDb $ P.insertKey key ent

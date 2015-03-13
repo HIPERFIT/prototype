@@ -11,7 +11,7 @@ import Data.Time
 import Data.Text (Text, unpack, pack)
 import Database.Persist
 import Database.Persist.TH
-import Database.Persist.Sql (rawSql, Single, unSingle)
+import Database.Persist.Sql (rawSql, Single, unSingle, toSqlKey)
 import GHC.Generics
 import Control.Monad (forM, liftM)
 import Control.Monad.Trans (lift)
@@ -31,7 +31,7 @@ getClosestQuote und d = do
   res <- runDb $ selectList [DbQuotesUnderlying ==. (pack und), DbQuotesDate <=. d] [Desc DbQuotesDate, LimitTo 1]
   return $ case res of
     [] -> error ("No quote for " ++ show d)
-    [Entity k (DbQuotes und _ v)] -> DbQuotes und d v
+    [Entity k (DbQuotes und _ v u)] -> DbQuotes und d v u
 
 getRawModelData :: [Day] -> String -> IO [RawModelData]
 getRawModelData ds und  = mapM ((liftM dbMdToRaw) . (getClosestMd und)) ds
@@ -40,7 +40,7 @@ getClosestMd und d = do
   res <- runDb $ selectList [DbModelDataUnderlying ==. (pack und), DbModelDataDate <=. d] [Desc DbModelDataDate, LimitTo 1]
   return $ case res of
     [] -> error ("No quote for " ++ show d)
-    [Entity k (DbModelData und _ v)] -> DbModelData und d v
+    [Entity k (DbModelData und _ v u)] -> DbModelData und d v u
 
 getStoredQuotes :: IO [RawQuotes]
 getStoredQuotes = do 
@@ -59,16 +59,16 @@ availUnderlyings = do
 
 -- inserting all csv data provided by DataProviders.Csv into database
 insertFromCsv = do
-  sq <-lift $ storedQuotes Csv.csvDataProvider
-  smd <- lift $ storedModelData Csv.csvDataProvider
-  insertMany_ (map rawToDbQuotes sq)
-  insertMany_ (map rawToDbMd smd)
+  sq <-  storedQuotes Csv.csvDataProvider
+  smd <- storedModelData Csv.csvDataProvider
+  runDb $ insertMany_ (map rawToDbQuotes sq)
+  runDb $ insertMany_ (map rawToDbMd smd)
 
 
 -- conversion functions to and from raw data representation
 
 dbQuotesToRaw q = (unpack $ dbQuotesUnderlying q, dbQuotesDate q, dbQuotesValue q)
-rawToDbQuotes (und, d, v) = DbQuotes (pack und) d v 
+rawToDbQuotes (und, d, v) = DbQuotes (pack und) d v $ toSqlKey (fromIntegral defaultUserId)
 
 dbMdToRaw md = (unpack $ dbModelDataUnderlying md, dbModelDataDate md, dbModelDataValue md)
-rawToDbMd (und, d, v) = DbModelData (pack und) d v 
+rawToDbMd (und, d, v) = DbModelData (pack und) d v $ toSqlKey (fromIntegral defaultUserId)
