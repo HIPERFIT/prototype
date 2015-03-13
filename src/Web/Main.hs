@@ -16,6 +16,7 @@ import Web.Scotty hiding (body, params)
 import Data.Aeson (FromJSON)
 import qualified Database.Persist.Sql as P
 import System.Environment (getArgs)
+import Control.Monad (when)
 
 instance FromJSON CO.CallOption
 instance FromJSON RO.RainbowOption
@@ -26,6 +27,7 @@ main = do
   runDb $ P.runMigration migrateTables
   createDefaultUser
   createDefaultPortfolio
+  initializeDataTables
   port <- getPortOrDefault
   scotty port $ do
     api "callOption"    (jsonContract :: ActionM CO.CallOption) CO.makeContract
@@ -39,3 +41,8 @@ getPortOrDefault = do
              []     -> defaultPort
              [port] -> read port
              _      -> error "Wrong number of arguments"
+
+initializeDataTables = do
+  quotes <- (runDb $ P.selectList [] []) :: IO [P.Entity DbQuotes]
+  modelData <- (runDb $ P.selectList [] []) :: IO [P.Entity DbModelData]
+  when ((not $ null quotes) && (not $ null modelData)) $ insertFromCsv
