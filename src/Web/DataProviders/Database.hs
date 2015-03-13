@@ -39,7 +39,7 @@ getRawModelData ds und  = mapM ((liftM dbMdToRaw) . (getClosestMd und)) ds
 getClosestMd und d = do
   res <- runDb $ selectList [DbModelDataUnderlying ==. (pack und), DbModelDataDate <=. d] [Desc DbModelDataDate, LimitTo 1]
   return $ case res of
-    [] -> error ("No quote for " ++ show d)
+    [] -> error ("No model data for " ++ show d)
     [Entity k (DbModelData und _ v u)] -> DbModelData und d v u
 
 getStoredQuotes :: IO [RawQuotes]
