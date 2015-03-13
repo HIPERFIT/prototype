@@ -45,4 +45,4 @@ getPortOrDefault = do
 initializeDataTables = do
   quotes <- (runDb $ P.selectList [] []) :: IO [P.Entity DbQuotes]
   modelData <- (runDb $ P.selectList [] []) :: IO [P.Entity DbModelData]
-  when ((not $ null quotes) && (not $ null modelData)) $ insertFromCsv
+  when ((null quotes) && (null modelData)) $ insertFromCsv
