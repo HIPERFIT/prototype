@@ -1,6 +1,7 @@
 module Tests where
 
 import Contract
+import Contract.Transform
 import Contract.Expr
 import CodeGen.OpenclGen
 import CodeGen.DataGen
@@ -254,14 +255,14 @@ ex7aPrice = 0.016941999
 
 
 testData =
-    [("Ex1a", ex1aData, mEx1a, ex1aPrice),
-     ("Ex2a", ex2aData, mEx2a, ex2aPrice),
-     --("Ex4a", ex2aData, mEx4a, ex4aPrice),
-     ("Ex6a", ex6aData, mEx6a, ex6aPrice),
-     ("Ex6c", ex6aData, mEx6c, ex6cPrice),
-     ("Ex7a", ex7aData, mEx7a, ex7aPrice),
-     ("finpar: SmallContract", SmallC.inputData, SmallC.mEuropean, SmallC.refPrice),
-     ("finpar: MediumContract", MediumC.inputData, MediumC.worstOff, MediumC.refPrice)
+    [ ("Ex1a", ex1aData, mEx1a, ex1aPrice)
+    , ("Ex2a", ex2aData, mEx2a, ex2aPrice)
+    --, ("Ex4a", ex2aData, mEx4a, ex4aPrice)
+    , ("Ex6a", ex6aData, mEx6a, ex6aPrice)
+    , ("Ex6c", ex6aData, mEx6c, ex6cPrice)
+    , ("Ex7a", ex7aData, mEx7a, ex7aPrice)
+    , ("finpar: SmallContract", SmallC.inputData, SmallC.mEuropean, SmallC.refPrice)
+    , ("finpar: MediumContract", MediumC.inputData, MediumC.worstOff, MediumC.refPrice)
     ]
 
 dataConf = DataConf {monteCarloIter = 4000000}
