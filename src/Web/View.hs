@@ -14,7 +14,7 @@ import qualified DB
 import Data.Time
 import Web.Scotty hiding (body, params, text)
 import CSS
-import Data.Aeson (object, (.=), FromJSON(..), decode, eitherDecode, Value (..))
+import Data.Aeson (object, (.=), FromJSON(..), decode, eitherDecode, Value (..), encode)
 import Data.Text.Lazy (toStrict)
 import Prelude hiding (div, head, id, span)
 import Text.Blaze.Html5 (Html, a, body, button,
@@ -32,6 +32,7 @@ import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Text.Blaze.Internal (preEscapedText, string, text)
 import Text.Blaze (stringValue)
 import qualified Data.Text as T
+import qualified Data.ByteString.Lazy.Char8 as BL
 import Data.Data
 import Data.Monoid (mempty, mconcat)
 import GHC.Generics (Rep, Generic)
@@ -132,17 +133,34 @@ buildForm dataDescr = form ! id "mainForm" ! dataAttribute "url" (stringValue $ 
       formData = params dataDescr
       commonFields = gtoForm (Proxy :: Proxy (Rep CommonContractData))
 
-marketDataView :: [RawQuotes] -> ActionM ()
-marketDataView quotes = blaze $ layout "Market Data" (Just (snd marketDataMenuItem)) $
-                   buildTable (buildThead headerRow, buildTbody $ (fields ++ [addBtn]) : map toRow quotes)
+marketDataView :: [RawQuotes] -> [RawCorr] -> ActionM ()
+marketDataView quotes corrs = blaze $ layout "Market Data" (Just (snd marketDataMenuItem)) $ do
+                 div ! id "data-tabs" $ do
+                   ul ! class_ "nav nav-tabs" $ do
+                     li ! class_ "active" $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#quotes" $ "Quotes"
+                     li  $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#corrs" $ "Correlations"
+                   div ! class_ "tab-content" $ do
+                     div! id "quotes" ! class_ "tab-pane fade in active" $ 
+                        quotesTable quotes
+                     div ! id "corrs" ! class_ "tab-pane fade" $ 
+                       corrsTable corrs
+      
+
+quotesTable quotes = buildTable (buildThead headerRow, buildTbody $ (fields ++ [addBtn]) : map toRow quotes)
     where
       headerRow = ["Underlying", "Date", "Price", ""]
-      toRow (und, d, vol) = [string und, string $ formatDate d, string $ ppDouble 3 vol, delLink und d]
+      toRow (und, d, vol) = [ string und, string $ formatDate d, string $ ppDouble 3 vol
+                            , dataDelLink (encode (und, formatDate d)) "/marketData/quotes/"]
       fields = map field $ gtoForm (Proxy :: Proxy (Rep DataForm))
-      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "add-data" ! href "/marketData/" $ "Add"
-      delLink und d = a ! dataAttribute "und" (stringValue und) ! dataAttribute "date" (stringValue (formatDate d))
-                        ! href "/marketData/" ! class_ "del-item" $ i ! class_ "glyphicon glyphicon-trash" $ ""
-      
+      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "add-data" ! href "/marketData/quotes/" $ "Add"
+
+corrsTable corrs = buildTable (buildThead headerRow, buildTbody $ (fields ++ [addBtn]) : map toRow corrs)
+    where
+      headerRow = ["Underlying1", "Underlying2", "Date", "Correlation", ""]
+      toRow (und1, und2, d, vol) = [ string und1, string und2, string $ formatDate d, string $ ppDouble 3 vol
+                                   , dataDelLink (encode (und1, und2, formatDate d)) "/marketData/corrs/"]
+      fields = map field $ gtoForm (Proxy :: Proxy (Rep CorrForm))
+      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "add-data-corrs" ! href "/marketData/corrs/" $ "Add"
 
 portfolioView portfolio = blaze $ layout "My Portfolio" (Just (snd myPortfolioMenuItem)) $ do
                             div ! class_ "row" $ do
@@ -170,7 +188,8 @@ modelDataView md = do
         buildTable (buildThead headerRow, buildTbody $ (fields ++ [addBtn]) : map toRow md)
    where
      headerRow = ["Underlying", "Date", "Volatility", ""]
-     toRow (und, d, vol) = [string und, string $ formatDate d, string $ ppDouble 3 vol, delLink und d]
+     toRow (und, d, vol) = [ string und, string $ formatDate d, string $ ppDouble 3 vol
+                           , dataDelLink (encode (und, formatDate d)) "/modelData/"]
      fields = map field $ gtoForm (Proxy :: Proxy (Rep DataForm))
      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "add-data" ! href "/modelData/" $ "Add"
      delLink und d = a ! dataAttribute "und" (stringValue und) ! dataAttribute "date" (stringValue (formatDate d))
@@ -186,6 +205,9 @@ buildTbody rows = mconcat $ map tr $ map row rows
     where
       row xs = mconcat $ map (td ! class_ "vert-align fixed-height") xs
 
+dataDelLink key url = a ! dataAttribute "key" (stringValue $ BL.unpack key)  
+                        ! href url ! class_ "del-item" $ i ! class_ "glyphicon glyphicon-trash" $ ""
+
 pricingForm = mconcat $ map labeledField $ gtoForm (Proxy :: Proxy (Rep PricingForm))
 
 labeledField :: (String, TypeRep) -> Html
@@ -199,6 +221,7 @@ field (name, tr) | tr == typeOf (undefined :: Double) ||  tr == typeOf (undefine
                  | tr == typeOf (undefined :: Day) || tr == typeOf (undefined :: Maybe Day)  = dateField name 
                  | tr == typeOf (undefined :: Underlying) = selectField name
                  | tr == typeOf (undefined :: T.Text)     = textField name
+                 | tr == typeOf (undefined :: PercentField) = percentField name
 
 numField :: String -> Html
 numField fName  = input ! type_ "text" ! class_ "form-control" ! name (stringValue fName) 
@@ -214,6 +237,12 @@ dateField fName = div ! class_ "input-group date" ! id (stringValue (fName ++ "P
 selectField :: String -> Html
 selectField fName = select ! class_ "form-control selectpicker" ! name (stringValue fName)
                                   ! dataAttribute "datatype" "Underlying" $ ""
+
+percentField :: String -> Html
+percentField fName = do
+  div ! class_ "input-group" $ do
+                       input ! type_ "text" ! class_ "form-control" ! name (stringValue fName) ! dataAttribute "datatype" "PercentField"
+                       span ! class_ "input-group-addon" $ "%"
 
 textField :: String -> Html
 textField fName = input ! type_ "text" ! class_ "form-control" ! name (stringValue fName)

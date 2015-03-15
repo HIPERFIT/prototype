@@ -4,6 +4,7 @@ import CodeGen.DataGen
 import Contract.Date
 import DataProviders.Data
 import DataProviders.Common
+import Data
 import Utils
 
 import Data.Time
@@ -18,7 +19,7 @@ instance FromField Day where
     parseField s = return $ parseDate $ B.unpack s
 
 csvDataProvider = DataProvider { provideQuotes     = getRawQuotes
-                               , provideCorrs      = undefined
+                               , provideCorrs      = getRawCorrs
                                , provideModelData  = getRawModelData
                                , storedQuotes      = getStoredQuotes
                                , storedCorrs       = getStoredCorrs
@@ -36,6 +37,12 @@ getRawQuotes days und =
       return $ findClosestValues days $ filterByUnderlying und quotes
 
 filterByUnderlying und xs = filter (\(und',_,_) -> und' == und) xs
+
+getRawCorrs :: Day -> [Underlying] -> IO [RawCorr]
+getRawCorrs d unds = do
+  corrs <- getStoredCorrs
+  let undPairs = [(und1, und2) | und1 <- unds, und2 <- unds, und1 /= und2]
+  return $ filter (\(u1, u2, d', v) -> d' <= d && (u1,u2) `elem` undPairs) corrs
 
 availableUnderlyings :: IO [String]
 availableUnderlyings = do

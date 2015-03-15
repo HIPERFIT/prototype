@@ -4,7 +4,8 @@ function collectData (ins) {
     $.each(ins, function (i, x) {
         var $x = $(x);
         if ($x.val() !== "") {
-            if ($x.data('datatype') === 'Double') { 
+            var datatype = $x.data('datatype');
+            if ((datatype === 'Double') || (datatype === 'PercentField')) { 
                 v = parseFloat($(x).val());
             } else v = $x.val();
             res[$x.attr('name')] = v;
@@ -58,9 +59,24 @@ function invalidateResult ($sel) {
     }
 }
 
+function postData ($inputs, url) {
+    $('#result').empty().hide();
+    $('#error').empty().hide();
+    var data = collectData($inputs);
+    $.post(url, JSON.stringify(data))
+        .done(function(resp) { 
+            location.reload();
+        })
+        .fail(function(jqXHR, textStatus, errorThrown) {
+            $('#error').html(jqXHR.responseText);
+            $('#error').show();
+        })
+}
+
 function hideAlerts() {
     $('#pricing-form-alert, #error, #result').empty().hide();
 }
+
 
 $(document).ready(function() {
     $('.selectpicker').selectpicker();
@@ -115,10 +131,7 @@ $(document).ready(function() {
     });
     $('.del-item').click(function(evt) {
         evt.preventDefault();
-        var data = [ 
-             $(this).data('und'), 
-             $(this).data('date')
-        ];
+        var data = $(this).data('key');
         $.ajax({
             type: 'DELETE',
             url: $(this).attr('href'),
@@ -134,20 +147,21 @@ $(document).ready(function() {
     });
     $('#add-data').click(function(evt) {
         evt.preventDefault();
-        $('#result').empty().hide();
-        $('#error').empty().hide();
-        var url = $(this).attr('href');
-        var data = collectData($('#add-data').closest('tr').find('.form-control'));
-        $.post(url, JSON.stringify(data))
-            .done(function(resp) { $('#result').html(resp.msg);
-                                   $('#result').show();
-                                   location.reload();
-                                 })
-            .fail(function(jqXHR, textStatus, errorThrown) {
-                $('#error').html(jqXHR.responseText);
-                $('#error').show();
-            })
+        postData($('#add-data').closest('tr').find('.form-control'), $(this).attr('href'));
+    });
+    $('#add-data-corrs').click(function(evt) {
+        evt.preventDefault();
+        postData($('#add-data-corrs').closest('tr').find('.form-control'), 
+                 $(this).attr('href'))
+    });
+
+    var url = document.location.toString();
+    if (url.match('marketData') && url.match('#')) {
+        $('#data-tabs a[href=#'+url.split('#')[1]+']').tab('show') ;
+    }
+    $('#data-tabs a.tab-link').on('shown.bs.tab', function (e) {
+        window.location.hash = e.target.hash;
     })
-    $('input[name="currentDate"], input[name="interestRate"]').keydown(function() {invalidateResult($('.price-output, .total-output'))});
+    $('input[name="currentDate"], input[name="interestRate"], input[name="iterations"]').keydown(function() {invalidateResult($('.price-output, .total-output'))});
     $('input[name="currentDate"]').change(function() {invalidateResult($('.price-output, .total-output'))});
-});
+})

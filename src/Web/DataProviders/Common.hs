@@ -12,7 +12,7 @@ import Data.List (find, sortBy)
 toMarketData :: ([RawQuotes],[RawCorr]) -> MarketData
 toMarketData (rawQuotes, rawCorrs) = (map toCorr rawCorrs, makeQuotes rawQuotes)
     where
-      toCorr (und1, und2, corr) = Corr (und1, und2) corr
+      toCorr (und1, und2, _, corr) = Corr (und1, und2) corr
 
 makeQuotes :: [RawQuotes] -> [Quotes]
 makeQuotes qs = map mkEntry groupedQuotes

@@ -24,7 +24,7 @@ import Web.Scotty hiding (body, params)
 import Web.Scotty.Internal.Types hiding (Env)
 import Network.Wai.Middleware.Static (staticPolicy, addBase)
 import CSS
-import Data.Aeson (object, (.=), FromJSON(..), decode, eitherDecode, Value (..), encode)
+import Data.Aeson (object, (.=), FromJSON(..), decode, eitherDecode, Value (..), encode, ToJSON (..))
 import Control.Monad.Trans
 import Control.Monad (when)
 import qualified Data.Map as M
@@ -44,6 +44,9 @@ import Data.Maybe
 instance FromJSON CommonContractData
 instance FromJSON PricingForm
 instance FromJSON DataForm
+instance FromJSON CorrForm
+instance FromJSON PercentField
+instance ToJSON PercentField
 
 defaultService allContracts dataProvider = do
     get "/" $ homeView allContracts
@@ -69,16 +72,26 @@ defaultService allContracts dataProvider = do
       json availUnd
     get "/marketData/view/" $ do 
       quotes <- liftIO $ storedQuotes dataProvider
-      marketDataView quotes
-    post "/marketData/" $ do
+      corrs  <- liftIO $ storedCorrs dataProvider
+      marketDataView quotes corrs
+    post "/marketData/quotes/" $ do
       form <- jsonData :: ActionM DataForm
       let md = DbQuotes (fUnderlying form) (fDate form) (fVal form) (toSqlKey (fromIntegral defaultUserId))
       liftIO $ runDb $ P.insert_ md
       json $ object ["msg" .= ("Data added successfully" :: String)]
-    delete "/marketData/" $ do
+    delete "/marketData/quotes/" $ do
       key <- jsonData :: ActionM (Text, Day)
       liftIO $ runDb $ P.deleteBy $ (uncurry QuoteEntry) key
       text "OK"
+    delete "/marketData/corrs/" $ do
+      (und1, und2, d) <- jsonData :: ActionM (Text, Text, Day)
+      liftIO $ runDb $ P.deleteBy $ CorrEntry und1 und2 d
+      text "OK"
+    post "/marketData/corrs/" $ do
+      form <- jsonData :: ActionM CorrForm
+      let corr = DbCorr (corrUnd1 form) (corrUnd2 form) (corrDate form) (corrVal form) (toSqlKey (fromIntegral defaultUserId))
+      liftIO $ runDb $ P.insert_ corr
+      json $ object ["msg" .= ("Data added successfully" :: String)]
     get "/modelData/" $ do
       md <- liftIO $ storedModelData dataProvider
       modelDataView md
@@ -115,12 +128,13 @@ toPFItem commonData cInput cs = PFItem { pFItemStartDate = startDate commonData
                                        , pFItemContractType = TL.toStrict $ TL.pack $ show $ typeOf cInput
                                        , pFItemNominal = nominal commonData
                                        , pFItemContractSpec = T.pack $ show cs
-                                       , pFItemPortfolioId = toSqlKey $ fromIntegral defaultPortfolioId}
+                                       , pFItemPortfolioId = toSqlKey $ fromIntegral defaultPortfolioId }
 
+-- TODO: Refactoring needed. Possibly, merge with mkData
 makeInput :: MContract -> PricingForm -> DataProvider -> IO ((DiscModel, [Model], MarketData), MContract)
 makeInput mContr@(sDate, contr) pricingForm dataProvider = do
   (modelData, marketData) <- mkData mContr pricingForm dataProvider
-  return ( (ConstDisc $ interestRate pricingForm
+  return ( (ConstDisc $ fromPercentField $ interestRate pricingForm
            , modelData
            , marketData) 
          , mContr)
@@ -133,16 +147,19 @@ makeInput mContr@(sDate, contr) pricingForm dataProvider = do
 mkData mContr@(sDate, contr) pricingForm dataProvider = do
   rawModelData <- mapM (getRawModelData allDays) unds
   rawQuotes <- mapM (getRawQuotes $ (contrDate2Day sDate) : allDays) unds
+  rawCorrs <- getRawCorrs currDate unds
   return ( map toBS $ zip unds $ rawModelData
-         , toMarketData $ (concat rawQuotes, [])) -- ingnoring correlations for now
+         , toMarketData $ (concat rawQuotes, rawCorrs)) -- ingnoring correlations for now
     where
-      toBS (und, md) = bsRiskFreeRate und (map convertDate md) (interestRate pricingForm) sDate eDate
+      currDate = fromMaybe (contrDate2Day sDate) $ currentDate pricingForm 
+      toBS (und, md) = bsRiskFreeRate und (map convertDate md) (fromPercentField $ interestRate pricingForm) sDate eDate
       cMeta = extractMeta mContr
       eDate = endDate cMeta
       unds  = underlyings cMeta
       allDays = map contrDate2Day (allDates cMeta)
       getRawModelData = provideModelData dataProvider
       getRawQuotes = provideQuotes dataProvider
+      getRawCorrs = provideCorrs dataProvider
       convertDate (u, d, v) = (u, day2ContrDate d, v)
 
 makeEnv quotes = foldr (.) id $ map f quotes

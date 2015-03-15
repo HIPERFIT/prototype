@@ -45,6 +45,16 @@ DbModelData
    MDEntry     underlying date
    deriving Show Generic
 
+DbCorr
+  underlying1  Text
+  underlying2  Text
+  date         Day
+  corr         Double
+  userId       UserId
+  CorrEntry underlying1 underlying2 date
+  CorrEntry1 underlying2 underlying1 date
+  deriving Show Generic
+
 User
   username  String
   password  String

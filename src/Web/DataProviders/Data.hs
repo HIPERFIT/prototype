@@ -1,15 +1,16 @@
 module DataProviders.Data where
 
 import Data.Time
+import Data
 
-type RawQuotes = (String, Day, Double)
-type RawCorr = (String, String, Double)
-type RawModelData = (String, Day, Double)
+type RawQuotes = (Underlying, Day, Double)
+type RawCorr = (Underlying, Underlying, Day, Double)
+type RawModelData = (Underlying, Day, Double)
 
-data DataProvider = DataProvider { provideQuotes     :: [Day] -> String -> IO [RawQuotes]
-                                 , provideCorrs      :: Day   -> String -> IO [RawCorr]
-                                 , provideModelData  :: [Day] -> String -> IO [RawModelData]
+data DataProvider = DataProvider { provideQuotes     :: [Day] ->  Underlying  -> IO [RawQuotes]
+                                 , provideCorrs      ::  Day  -> [Underlying] -> IO [RawCorr]
+                                 , provideModelData  :: [Day] ->  Underlying  -> IO [RawModelData]
                                  , storedQuotes      :: IO [RawQuotes]
                                  , storedCorrs       :: IO [RawCorr]
                                  , storedModelData   :: IO [RawModelData]
-                                 , storedUnderlyings :: IO [String] }
+                                 , storedUnderlyings :: IO [Underlying] }
