@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import qualified CallOption as CO
+import qualified VanillaOption as VO
 import qualified RainbowOption as RO
 import DataProviders.Database
 import DataProviders.Data
@@ -18,10 +18,10 @@ import qualified Database.Persist.Sql as P
 import System.Environment (getArgs)
 import Control.Monad (when)
 
-instance FromJSON CO.CallOption
+instance FromJSON VO.VanillaOption
 instance FromJSON RO.RainbowOption
 
-allContracts = [CO.callOption, RO.rainbowOption]
+allContracts = [VO.vanillaOption, RO.rainbowOption]
 
 main = do
   runDb $ P.runMigration migrateTables
@@ -30,7 +30,7 @@ main = do
   initializeDataTables
   port <- getPortOrDefault
   scotty port $ do
-    api "callOption"    (jsonContract :: ActionM CO.CallOption) CO.makeContract
+    api "callOption"    (jsonContract :: ActionM VO.VanillaOption) VO.makeContract
     api "rainbowOption" (jsonContract :: ActionM RO.RainbowOption) RO.makeContract
     defaultService allContracts dbDataProvider
 

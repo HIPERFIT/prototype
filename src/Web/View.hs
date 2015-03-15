@@ -211,9 +211,12 @@ dataDelLink key url = a ! dataAttribute "key" (stringValue $ BL.unpack key)
 pricingForm = mconcat $ map labeledField $ gtoForm (Proxy :: Proxy (Rep PricingForm))
 
 labeledField :: (String, TypeRep) -> Html
-labeledField (name, tr) = div ! class_ "form-group" $ do
-                            label $ string $ capFirst name
-                            field (name, tr)
+labeledField (name, tr) | tr == typeOf (undefined :: Bool) = div ! class_ "checkbox" $ label $ do
+                                                               boolField name
+                                                               string $ capFirst name
+                        | otherwise = div ! class_ "form-group" $ do
+                                        label $ string $ capFirst name
+                                        field (name, tr)
 
 field :: (String, TypeRep) -> Html
 field (name, tr) | tr == typeOf (undefined :: Double) ||  tr == typeOf (undefined :: Int)  = numField name
@@ -222,6 +225,7 @@ field (name, tr) | tr == typeOf (undefined :: Double) ||  tr == typeOf (undefine
                  | tr == typeOf (undefined :: Underlying) = selectField name
                  | tr == typeOf (undefined :: T.Text)     = textField name
                  | tr == typeOf (undefined :: PercentField) = percentField name
+                 | tr == typeOf (undefined :: Bool) = boolField name
 
 numField :: String -> Html
 numField fName  = input ! type_ "text" ! class_ "form-control" ! name (stringValue fName) 
@@ -246,3 +250,6 @@ percentField fName = do
 
 textField :: String -> Html
 textField fName = input ! type_ "text" ! class_ "form-control" ! name (stringValue fName)
+
+boolField :: String -> Html
+boolField fName = input ! type_ "checkbox" ! name (stringValue fName) ! dataAttribute "datatype" "Bool"

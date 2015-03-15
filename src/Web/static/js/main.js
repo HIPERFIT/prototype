@@ -6,7 +6,9 @@ function collectData (ins) {
         if ($x.val() !== "") {
             var datatype = $x.data('datatype');
             if ((datatype === 'Double') || (datatype === 'PercentField')) { 
-                v = parseFloat($(x).val());
+                v = parseFloat($x.val());
+            } else if (datatype === 'Bool') {
+                v = $x.prop('checked');
             } else v = $x.val();
             res[$x.attr('name')] = v;
         }
@@ -77,7 +79,6 @@ function hideAlerts() {
     $('#pricing-form-alert, #error, #result').empty().hide();
 }
 
-
 $(document).ready(function() {
     $('.selectpicker').selectpicker();
     $('.date').datepicker({autoclose: true,
@@ -87,7 +88,7 @@ $(document).ready(function() {
         $('#result').empty().hide();
         $('#error').empty().hide();
         var url = '/api/' + $('#mainForm').data("url");
-        var contract = collectData($('.contract-data .form-control'));
+        var contract = collectData($('.contract-data .form-control, input[type="checkbox"]'));
         var common = collectData($('.common-data .form-control'));
         $.post(url, { "contractData" : JSON.stringify(contract),
                       "common" : JSON.stringify(common)

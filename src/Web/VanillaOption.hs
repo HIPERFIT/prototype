@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
-module CallOption (CallOption, callOption, makeContract) where
+module VanillaOption (VanillaOption, vanillaOption, makeContract) where
 
 import Contract.Expr
 import Contract.Type
@@ -17,20 +17,22 @@ import DataProviders.Csv
 import DataProviders.Common
 import PersistentData
 
-data CallOption = OD {
+data VanillaOption = VOpt {
       underlying :: Underlying
     , strike     :: Double
     , endDate    :: Day
+    , putOption  :: Bool
 } deriving (Show, Generic, Typeable)
 
 
-callOption = GUIRepr { guiLabel = "Call option"
-                     , params = gtoForm (Proxy :: Proxy (Rep CallOption))
-                     , url = "callOption" }
+vanillaOption = GUIRepr { guiLabel = "Vanilla option"
+                     , params = gtoForm (Proxy :: Proxy (Rep VanillaOption))
+                     , url = "vanillaOption" }
 
 makeContract startDate optData = 
     let
         maturity = fromIntegral $ diffDays (endDate optData) startDate 
         theobs = obs (underlying optData, 0)
         strk = r $ strike optData
-    in transl maturity (scale (maxx (theobs - strk) 0) (transfOne EUR "you" "me"))
+        val = if (putOption optData) then (strk - theobs) else (theobs - strk)
+    in transl maturity (scale (maxx val 0) (transfOne EUR "you" "me"))
