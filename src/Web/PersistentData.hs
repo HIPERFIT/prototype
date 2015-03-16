@@ -59,4 +59,5 @@ User
   username  String
   password  String
   Username username
+  deriving Show Generic
 |]

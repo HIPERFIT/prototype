@@ -19,6 +19,7 @@ import DB
 import Serialization
 import Utils
 import CodeGen.Utils
+import Auth
 
 import Web.Scotty hiding (body, params)
 import Web.Scotty.Internal.Types hiding (Env)
@@ -51,61 +52,61 @@ instance FromJSON PercentField
 instance ToJSON PercentField
 
 defaultService allContracts dataProvider = do
-    get "/" $ homeView allContracts
+    get "/" $ basicAuth $ homeView allContracts
     get (capture $ contractsBaseUrl ++ ":type") $ do
                        ty <- param "type"
                        code <- liftIO $ readInstrument $ capFirst ty
                        contractView allContracts (toMap allContracts M.! ty) code
-    post "/pricer/" $ do
+    post "/pricer/" $ basicAuth $ do
       pricingForm <- (jsonParam "conf") :: ActionM PricingForm
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
       res <- liftIO $ mapM (maybeValuate pricingForm dataProvider) $ map P.entityVal pItems
       json $ object [ "prices" .= res
                     , "total"  .= (sum $ map (fromMaybe 0) res) ]
-    get "/portfolio/" $ do
+    get "/portfolio/" $ basicAuth $ do
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
       currDate <- liftIO getCurrentTime
       portfolioView (map (withHorizon . fromEntity) pItems) $
                     [("currentDate", Just $ show $ utctDay currDate), ("interestRate", Just "2"), ("iterations", Just "10000")]
-    delete "/portfolio/:id" $ do
+    delete "/portfolio/:id" $ basicAuth $ do
       pfiId <- param "id"
       let key = toSqlKey (fromIntegral ((read pfiId) :: Integer)) :: P.Key PFItem
       liftIO $ runDb $ P.delete key
       text "OK"
-    get "/marketData/underlyings/" $ do
+    get "/marketData/underlyings/" $ basicAuth $ do
       availUnd <- liftIO (storedUnderlyings dataProvider)
       json availUnd
-    get "/marketData/view/" $ do 
+    get "/marketData/view/" $ basicAuth $ do 
       quotes <- liftIO $ storedQuotes dataProvider
       corrs  <- liftIO $ storedCorrs dataProvider
       marketDataView quotes corrs
-    post "/marketData/quotes/" $ do
+    post "/marketData/quotes/" $ basicAuth $ do
       form <- jsonData :: ActionM DataForm
       let md = DbQuotes (fUnderlying form) (fDate form) (fVal form) (toSqlKey (fromIntegral defaultUserId))
       liftIO $ runDb $ P.insert_ md
       json $ object ["msg" .= ("Data added successfully" :: String)]
-    delete "/marketData/quotes/" $ do
+    delete "/marketData/quotes/" $ basicAuth $ do
       key <- jsonData :: ActionM (Text, Day)
       liftIO $ runDb $ P.deleteBy $ (uncurry QuoteEntry) key
       text "OK"
-    delete "/marketData/corrs/" $ do
+    delete "/marketData/corrs/" $ basicAuth $ do
       (und1, und2, d) <- jsonData :: ActionM (Text, Text, Day)
       liftIO $ runDb $ P.deleteBy $ CorrEntry und1 und2 d
       text "OK"
-    post "/marketData/corrs/" $ do
+    post "/marketData/corrs/" $ basicAuth $ do
       form <- jsonData :: ActionM CorrForm
       let corr = DbCorr (corrUnd1 form) (corrUnd2 form) (corrDate form) (corrVal form) (toSqlKey (fromIntegral defaultUserId))
       liftIO $ runDb $ P.insert_ corr
       json $ object ["msg" .= ("Data added successfully" :: String)]
-    get "/modelData/" $ do
+    get "/modelData/" $ basicAuth $ do
       md <- liftIO $ storedModelData dataProvider
       modelDataView md
-    post   "/modelData/" $ do
+    post   "/modelData/" $ basicAuth $ do
       form <- jsonData :: ActionM DataForm
       let md = DbModelData (fUnderlying form) (fDate form) (fVal form) (toSqlKey (fromIntegral defaultUserId))
       liftIO $ runDb $ P.insert_ md
       json $ object ["msg" .= ("Data added successfully" :: String)]
-    delete "/modelData/" $ do
+    delete "/modelData/" $ basicAuth $ do
       key <- jsonData :: ActionM (Text, Day)
       liftIO $ runDb $ P.deleteBy $ (uncurry MDEntry) key
       text "OK"
@@ -154,7 +155,7 @@ mkData mContr@(sDate, contr) pricingForm dataProvider = do
   rawQuotes <- mapM (getRawQuotes $ (contrDate2Day sDate) : allDays) unds
   rawCorrs <- getRawCorrs currDate unds
   return ( map toBS $ zip unds $ rawModelData
-         , toMarketData $ (concat rawQuotes, rawCorrs)) -- ingnoring correlations for now
+         , toMarketData $ (concat rawQuotes, rawCorrs))
     where
       currDate = fromMaybe (contrDate2Day sDate) $ currentDate pricingForm 
       toBS (und, md) = bsRiskFreeRate und (map convertDate md) (fromPercentField $ interestRate pricingForm) sDate eDate
@@ -222,3 +223,6 @@ readInstrument name = do
   allCode <- readFile ("src/Web/Instrument/" ++ name ++ ".hs")
   let [_,res] = T.splitOn "{-@CODE@-}" $ T.pack allCode
   return res
+
+authUser u p | u == "hiperfit" && p == "123" = Authorized
+             | otherwise = Unauthorized
