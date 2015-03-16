@@ -48,7 +48,6 @@ function processing (run) {
         $('.total-output').removeClass('label-success').addClass('label-warning');
         $spinner.spin({width: 3, radius: 5, length: 5});
     } else {
-        resetStyles();
         $spinner.spin(false);
         $label.empty();
     }
@@ -110,7 +109,8 @@ $(document).ready(function() {
         var data = collectData($('.form-control'));
         var url = '/pricer/';
         $.post(url, { 'conf' : JSON.stringify(data) })
-            .done(function(resp) { 
+            .done(function(resp) {
+                resetStyles();
                 displayPrices($('.price-output'), resp.prices);
                 $('.total-output').html(resp.total.toFixed(4));
             })

@@ -137,7 +137,7 @@ buildForm dataDescr = form ! id "mainForm" ! dataAttribute "url" (stringValue $ 
                         fieldset ! class_ "common-data" $ mconcat $ map labeledField commonFields
                         fieldset ! class_ "contract-data" $ mconcat $ map labeledField formData
     where
-      formData = params dataDescr
+      formData = formFields dataDescr
       commonFields = gtoForm (Proxy :: Proxy (Rep CommonContractData))
 
 marketDataView :: [RawQuotes] -> [RawCorr] -> ActionM ()

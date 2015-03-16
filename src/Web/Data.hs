@@ -15,9 +15,9 @@ data PercentField = PercentField Double
 fromPercentField (PercentField a) = a / 100
 
 data ContractGUIRepr  =
-    GUIRepr { guiLabel :: String
-            , params   :: [(String, TypeRep)]
-            , url      :: String }
+    GUIRepr { guiLabel   :: String
+            , formFields :: [(String, TypeRep)]
+            , url        :: String }
 
 data CommonContractData = CommonContractData { nominal   :: Int
                                              , startDate :: Day }

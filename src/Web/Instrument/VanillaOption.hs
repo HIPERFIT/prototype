@@ -27,9 +27,9 @@ data VanillaOption = VOpt {
 
 
 vanillaOption = 
-    GUIRepr { guiLabel = "Vanilla option"
-            , params = gtoForm (Proxy :: Proxy (Rep VanillaOption))
-            , url = "vanillaOption" }
+    GUIRepr { guiLabel   = "Vanilla option"
+            , formFields = gtoForm (Proxy :: Proxy (Rep VanillaOption))
+            , url        = "vanillaOption" }
 
 makeContract startDate optData = 
     let

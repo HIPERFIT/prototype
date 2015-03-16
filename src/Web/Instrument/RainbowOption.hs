@@ -26,9 +26,9 @@ data RainbowOption = RO {
 } deriving (Show, Generic, Typeable)
 
 rainbowOption = 
-    GUIRepr { guiLabel = "Rainbow option"
-            , params = gtoForm (Proxy :: Proxy (Rep RainbowOption))
-            , url = "rainbowOption" }
+    GUIRepr { guiLabel   = "Rainbow option"
+            , formFields = gtoForm (Proxy :: Proxy (Rep RainbowOption))
+            , url        = "rainbowOption" }
 
 makeContract startDate optData =
     let
