@@ -10,6 +10,7 @@ import Service
 import PersistentData
 import DB
 import Serialization
+import Data
 
 import Data.Time
 import Web.Scotty hiding (body, params)
@@ -30,8 +31,8 @@ main = do
   initializeDataTables
   port <- getPortOrDefault
   scotty port $ do
-    api "callOption"    (jsonContract :: ActionM VO.VanillaOption) VO.makeContract
-    api "rainbowOption" (jsonContract :: ActionM RO.RainbowOption) RO.makeContract
+    api (url VO.vanillaOption) (jsonContract :: ActionM VO.VanillaOption) VO.makeContract
+    api (url RO.rainbowOption) (jsonContract :: ActionM RO.RainbowOption) RO.makeContract
     defaultService allContracts dbDataProvider
 
 defaultPort = 3000

@@ -27,16 +27,18 @@ import Text.Blaze.Html5 (Html, a, body, button,
                          thead, fieldset, legend, AttributeValue)
 import Text.Blaze.Html5.Attributes (charset, class_, content, href,
                                     httpEquiv, id, media, name,
-                                    placeholder, rel, src, type_)
+                                    placeholder, rel, src, type_, value)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Text.Blaze.Internal (preEscapedText, string, text)
 import Text.Blaze (stringValue)
 import qualified Data.Text as T
 import qualified Data.ByteString.Lazy.Char8 as BL
 import Data.Data
+import Data.Maybe (fromMaybe)
 import Data.Monoid (mempty, mconcat)
 import GHC.Generics (Rep, Generic)
 import Control.Monad (forM_)
+import qualified Data.Map as M
 
 
 menuItems = [instrumentsMenuItem, myPortfolioMenuItem, marketDataMenuItem, modelDataMenuItem]
@@ -162,11 +164,11 @@ corrsTable corrs = buildTable (buildThead headerRow, buildTbody $ (fields ++ [ad
       fields = map field $ gtoForm (Proxy :: Proxy (Rep CorrForm))
       addBtn = a ! class_ "btn btn-lg btn-primary" ! id "add-data-corrs" ! href "/marketData/corrs/" $ "Add"
 
-portfolioView portfolio = blaze $ layout "My Portfolio" (Just (snd myPortfolioMenuItem)) $ do
+portfolioView portfolio defaults = blaze $ layout "My Portfolio" (Just (snd myPortfolioMenuItem)) $ do
                             div ! class_ "row" $ do
                                 div ! class_ "col-sm-8" $ buildTable (buildThead headerRow, buildTbody $ (map pItemRow portfolio) ++ [totalRow])
                                 div ! class_ "col-sm-4" $ do
-                                                   pricingForm
+                                                   pricingForm $ M.fromList defaults
                                                    a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run valuation"
                                                    div ! class_ "alert alert-warning" ! id "pricing-form-alert" $ ""
     where
@@ -208,48 +210,57 @@ buildTbody rows = mconcat $ map tr $ map row rows
 dataDelLink key url = a ! dataAttribute "key" (stringValue $ BL.unpack key)  
                         ! href url ! class_ "del-item" $ i ! class_ "glyphicon glyphicon-trash" $ ""
 
-pricingForm = mconcat $ map labeledField $ gtoForm (Proxy :: Proxy (Rep PricingForm))
+pricingForm defaults = mconcat $ map f $ gtoForm (Proxy :: Proxy (Rep PricingForm))
+    where
+      f item@(name, typeRep) = labeledFieldWithDefault (defaults M.! name) item
 
-labeledField :: (String, TypeRep) -> Html
-labeledField (name, tr) | tr == typeOf (undefined :: Bool) = div ! class_ "checkbox" $ label $ do
-                                                               boolField name
-                                                               string $ capFirst name
-                        | otherwise = div ! class_ "form-group" $ do
-                                        label $ string $ capFirst name
-                                        field (name, tr)
+labeledField = labeledFieldWithDefault Nothing
 
-field :: (String, TypeRep) -> Html
-field (name, tr) | tr == typeOf (undefined :: Double) ||  tr == typeOf (undefined :: Int)  = numField name
-                 -- possibly, we should add support for Maybe for other type of fields
-                 | tr == typeOf (undefined :: Day) || tr == typeOf (undefined :: Maybe Day)  = dateField name 
-                 | tr == typeOf (undefined :: Underlying) = selectField name
-                 | tr == typeOf (undefined :: T.Text)     = textField name
-                 | tr == typeOf (undefined :: PercentField) = percentField name
-                 | tr == typeOf (undefined :: Bool) = boolField name
+labeledFieldWithDefault :: Maybe String -> (String, TypeRep) -> Html
+labeledFieldWithDefault defaultVal (name, tr) | tr == typeOf (undefined :: Bool) = div ! class_ "checkbox" $ label $ do
+                                                                          boolField defaultVal name
+                                                                          string $ capFirst name
+                                              | otherwise = div ! class_ "form-group" $ do
+                                                              label $ string $ capFirst name
+                                                              fieldWithDefault defaultVal (name, tr)
 
-numField :: String -> Html
-numField fName  = input ! type_ "text" ! class_ "form-control" ! name (stringValue fName) 
-                              ! dataAttribute "datatype" "Double"
+field = fieldWithDefault Nothing
 
-dateField :: String -> Html
-dateField fName = div ! class_ "input-group date" ! id (stringValue (fName ++ "Picker")) $ 
+fieldWithDefault :: Maybe String -> (String, TypeRep) -> Html
+fieldWithDefault defaultVal (name, tr) | tr == typeOf (undefined :: Double) ||  tr == typeOf (undefined :: Int)  = numField defaultVal name
+                                       -- possibly, we should add support for Maybe for other type of fields
+                                       | tr == typeOf (undefined :: Day) || tr == typeOf (undefined :: Maybe Day)  = dateField defaultVal name 
+                                       | tr == typeOf (undefined :: Underlying) = selectField defaultVal name
+                                       | tr == typeOf (undefined :: T.Text)     = textField defaultVal name
+                                       | tr == typeOf (undefined :: PercentField) = percentField defaultVal name
+                                       | tr == typeOf (undefined :: Bool) = boolField defaultVal name
+
+numField :: Maybe String -> String -> Html
+numField defaultVal fName  = input ! type_ "text" ! class_ "form-control" ! name (stringValue fName) 
+                                   ! dataAttribute "datatype" "Double" ! value (stringValue (fromMaybe "" defaultVal))
+
+dateField :: Maybe String -> String -> Html
+dateField defaultVal fName = div ! class_ "input-group date" ! id (stringValue (fName ++ "Picker")) $ 
                          do
-                           input ! type_ "text" ! class_ "form-control" ! name (stringValue fName)
+                           input ! type_ "text" ! class_ "form-control" ! name (stringValue fName) ! value (stringValue (fromMaybe "" defaultVal))
                            span ! class_ "input-group-addon" $ 
                                 i ! class_ "glyphicon glyphicon-calendar" $ ""
 
-selectField :: String -> Html
-selectField fName = select ! class_ "form-control selectpicker" ! name (stringValue fName)
+-- TODO: add defaul value
+selectField :: Maybe String -> String -> Html
+selectField defaultVal fName = select ! class_ "form-control selectpicker" ! name (stringValue fName)
                                   ! dataAttribute "datatype" "Underlying" $ ""
 
-percentField :: String -> Html
-percentField fName = do
+percentField :: Maybe String -> String -> Html
+percentField defaultVal fName = do
   div ! class_ "input-group" $ do
                        input ! type_ "text" ! class_ "form-control" ! name (stringValue fName) ! dataAttribute "datatype" "PercentField"
+                             ! value (stringValue (fromMaybe "" defaultVal))
                        span ! class_ "input-group-addon" $ "%"
 
-textField :: String -> Html
-textField fName = input ! type_ "text" ! class_ "form-control" ! name (stringValue fName)
+textField :: Maybe String -> String -> Html
+textField defaultVal fName = input ! type_ "text" ! class_ "form-control" ! name (stringValue fName) ! value (stringValue (fromMaybe "" defaultVal))
 
-boolField :: String -> Html
-boolField fName = input ! type_ "checkbox" ! name (stringValue fName) ! dataAttribute "datatype" "Bool"
+-- TODO: add default value
+boolField :: Maybe String -> String -> Html
+boolField defaultVal fName = input ! type_ "checkbox" ! name (stringValue fName) ! dataAttribute "datatype" "Bool"

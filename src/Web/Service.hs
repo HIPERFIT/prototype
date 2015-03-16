@@ -40,6 +40,8 @@ import Database.Persist.Sql (toSqlKey, fromSqlKey)
 import Data.Time (Day, diffDays, addDays)
 import Data.Text (Text)
 import Data.Maybe
+import Data.Time.Clock
+import Data.Time.Calendar
 
 instance FromJSON CommonContractData
 instance FromJSON PricingForm
@@ -61,7 +63,9 @@ defaultService allContracts dataProvider = do
                     , "total"  .= (sum $ map (fromMaybe 0) res) ]
     get "/portfolio/" $ do
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
-      portfolioView $ map (withHorizon . fromEntity) pItems
+      currDate <- liftIO getCurrentTime
+      portfolioView (map (withHorizon . fromEntity) pItems) $
+                    [("currentDate", Just $ show $ utctDay currDate), ("interestRate", Just "2"), ("iterations", Just "10000")]
     delete "/portfolio/:id" $ do
       pfiId <- param "id"
       let key = toSqlKey (fromIntegral ((read pfiId) :: Integer)) :: P.Key PFItem
