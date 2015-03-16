@@ -54,7 +54,8 @@ defaultService allContracts dataProvider = do
     get "/" $ homeView allContracts
     get (capture $ contractsBaseUrl ++ ":type") $ do
                        ty <- param "type"
-                       contractView allContracts (toMap allContracts M.! ty)
+                       code <- liftIO $ readInstrument $ capFirst ty
+                       contractView allContracts (toMap allContracts M.! ty) code
     post "/pricer/" $ do
       pricingForm <- (jsonParam "conf") :: ActionM PricingForm
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
@@ -216,3 +217,8 @@ createIfNotExist (entId, ent) = do
                    Just _ -> False
                    Nothing -> True
     when exist $ runDb $ P.insertKey key ent
+
+readInstrument name = do
+  allCode <- readFile ("src/Web/Instrument/" ++ name ++ ".hs")
+  let [_,res] = T.splitOn "{-@CODE@-}" $ T.pack allCode
+  return res

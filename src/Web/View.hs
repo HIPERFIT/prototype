@@ -24,10 +24,12 @@ import Text.Blaze.Html5 (Html, a, body, button,
                          title, ul, (!), form, input, label, 
                          option, button, span, i, select, 
                          table, tr, td, th, stringValue, tbody, 
-                         thead, fieldset, legend, AttributeValue)
+                         thead, fieldset, legend, AttributeValue,
+                         pre)
 import Text.Blaze.Html5.Attributes (charset, class_, content, href,
                                     httpEquiv, id, media, name,
-                                    placeholder, rel, src, type_, value)
+                                    placeholder, rel, src, type_, 
+                                    value, colspan)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Text.Blaze.Internal (preEscapedText, string, text)
 import Text.Blaze (stringValue)
@@ -82,12 +84,12 @@ layout t activeMenuItem pageContent = docTypeHtml $ do
                           div ! class_ "alert alert-danger" ! id "error" $ ""
                           pageContent
 
-contractView :: [ContractGUIRepr] -> ContractGUIRepr -> ActionM ()
-contractView allContracts currentContract =
+contractView :: [ContractGUIRepr] -> ContractGUIRepr -> T.Text -> ActionM ()
+contractView allContracts currentContract code =
   blaze $ layout "Financial contracts" Nothing $ do
-                                              div ! class_ "row" $ do
-                                                div ! class_ "col-sm-4" $ leftPanel allContracts
-                                                div ! class_ "col-sm-8" $ rightPanel currentContract
+    div ! class_ "row" $ do
+      div ! class_ "col-sm-4" $ leftPanel allContracts
+      div ! class_ "col-sm-8" $ rightPanel currentContract code
 
 homeView :: [ContractGUIRepr] -> ActionM ()
 homeView allContracts = blaze $ layout "Financial contracts" (Just (snd instrumentsMenuItem)) $ do
@@ -102,12 +104,15 @@ leftPanel cs = ul ! class_ "list-group" $ forM_ labelsAndUrls toHrefList
       labelsAndUrls = map (\c -> (string $ guiLabel c, stringValue $ contractsBaseUrl ++ url c)) cs
       toHrefList (label, url)  = li ! class_ "list-group-item" $ a ! href url $ span label
 
-rightPanel dataDescr = do
+rightPanel dataDescr code = do
   div ! class_ "right-container" $
       do
         h2 $ string $ guiLabel dataDescr
         buildForm dataDescr
-        a ! class_ "btn btn-lg btn-primary" ! id "add" ! href "#" $ "Add to portfolio"
+        div ! class_ "form-buttons" $ do
+                              a ! class_ "btn btn-lg btn-primary" ! id "add" ! href "#" $ "Add to portfolio"
+                              a ! class_ "btn btn-lg btn-default" ! dataAttribute "toggle" "collapse" ! href "#code-view" $ "View code"
+  div ! class_ "collapse" ! id "code-view" $ pre $ text code
 
 navBar :: Maybe String -> Html
 navBar activeMenuItem = div ! class_ "navbar navbar-default" $ do
@@ -166,7 +171,7 @@ corrsTable corrs = buildTable (buildThead headerRow, buildTbody $ (fields ++ [ad
 
 portfolioView portfolio defaults = blaze $ layout "My Portfolio" (Just (snd myPortfolioMenuItem)) $ do
                             div ! class_ "row" $ do
-                                div ! class_ "col-sm-8" $ buildTable (buildThead headerRow, buildTbody $ (map pItemRow portfolio) ++ [totalRow])
+                                div ! class_ "col-sm-8" $ buildTable (buildThead headerRow, (pfTableBody $ (map pItemRow portfolio)) >> totalRow)
                                 div ! class_ "col-sm-4" $ do
                                                    pricingForm $ M.fromList defaults
                                                    a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run valuation"
@@ -183,7 +188,15 @@ portfolioView portfolio defaults = blaze $ layout "My Portfolio" (Just (snd myPo
                                 span ! class_ "spinner" $ ""
                             , a ! dataAttribute "id" (stringValue k) ! href "#" ! class_ "del-pfitem" $
                               i ! class_ "glyphicon glyphicon-trash" $ "" ]
-      totalRow = ["Total", "", "", "", h4 $ span ! class_ "total-output label label-success" $ "", ""]
+      totalRow = tr $ row ["Total", "", "", "", h4 $ span ! class_ "total-output label label-success" $ "", ""]
+      pfTableBody rows = mconcat $ map mkTr (zip3 [0 ..] (map row rows) portfolio)
+      mkTr (count, r, (_,p,_)) = do
+        tr ! class_ "pfitem-row"
+           ! dataAttribute "toggle" "collapse" 
+           ! dataAttribute "target" (stringValue ("#pfitem-details-" ++ show count))
+           ! id (stringValue ("pfitem-" ++ show count)) $ r
+        tr ! class_ "collapse"! id (stringValue ("pfitem-details-" ++ show count)) $ td ! colspan "6" $ text $ pFItemContractSpec p
+      row xs = mconcat $ map (td ! class_ "vert-align fixed-height") xs
 
 modelDataView md = do
   blaze $ layout "Model Data" (Just (snd modelDataMenuItem)) $

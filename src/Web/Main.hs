@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import qualified VanillaOption as VO
-import qualified RainbowOption as RO
+import qualified Instrument.VanillaOption as VO
+import qualified Instrument.RainbowOption as RO
 import DataProviders.Database
 import DataProviders.Data
 import View

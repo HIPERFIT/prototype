@@ -19,3 +19,5 @@ layoutCss = render $ do
               element ".table" |> tbody |> tr |> element "td.vert-align" ? verticalAlign middle 
               element ".table" |> tbody |> tr |> element "td.fixed-height" ? (height $ px 60)
               element ".user-info" ? paddingRight (px 5)
+              element ".form-buttons" |> a ? margin (px 5) (px 5) (px 5) (px 5)
+              element ".pfitem-row" ? cursor pointer

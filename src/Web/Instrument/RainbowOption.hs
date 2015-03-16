@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
-module RainbowOption (RainbowOption, rainbowOption, makeContract) where
+module Instrument.RainbowOption (RainbowOption, rainbowOption, makeContract) where
 
 import Contract.Expr
 import Contract.Type
@@ -17,6 +17,7 @@ import DataProviders.Csv
 import DataProviders.Common
 import PersistentData
 
+{-@CODE@-}
 data RainbowOption = RO {
       underlying1 :: Underlying
     , underlying2 :: Underlying
@@ -24,9 +25,10 @@ data RainbowOption = RO {
     , endDate     :: Day
 } deriving (Show, Generic, Typeable)
 
-rainbowOption = GUIRepr { guiLabel = "Rainbow option"
-                        , params = gtoForm (Proxy :: Proxy (Rep RainbowOption))
-                        , url = "rainbowOption" }
+rainbowOption = 
+    GUIRepr { guiLabel = "Rainbow option"
+            , params = gtoForm (Proxy :: Proxy (Rep RainbowOption))
+            , url = "rainbowOption" }
 
 makeContract startDate optData =
     let
