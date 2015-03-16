@@ -44,9 +44,11 @@ function processing (run) {
     var $spinner = $('.spinner');
     var $label = $('.processing-label');
     if (run) {
-        $label.html('Processing...');
+        $('.price-output').removeClass('label-info').addClass('label-warning');
+        $('.total-output').removeClass('label-success').addClass('label-warning');
         $spinner.spin({width: 3, radius: 5, length: 5});
     } else {
+        resetStyles();
         $spinner.spin(false);
         $label.empty();
     }
@@ -104,8 +106,6 @@ $(document).ready(function() {
     $('#run').click(function() {
         resetStyles();
         hideAlerts();
-        $('.price-output').empty();
-        $('.total-output').empty();
         processing(true);
         var data = collectData($('.form-control'));
         var url = '/pricer/';
