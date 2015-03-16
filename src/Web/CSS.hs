@@ -21,3 +21,4 @@ layoutCss = render $ do
               element ".user-info" ? paddingRight (px 5)
               element ".form-buttons" |> a ? margin (px 5) (px 5) (px 5) (px 5)
               element ".pfitem-row" ? cursor pointer
+              td |> element "div.date" ? maxWidth (px 200)
