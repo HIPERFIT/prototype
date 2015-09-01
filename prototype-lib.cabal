@@ -37,7 +37,7 @@ library
 
 executable             tests
   main-is:             Tests.hs
-  build-depends:       HUnit >= 1.2.5.2
+  build-depends:       HUnit == 1.2.5.2
                      , base >=4.6
                      , prototype-lib
   hs-source-dirs:      tests

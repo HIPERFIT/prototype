@@ -305,8 +305,8 @@ runTestText' (PutText put us0) t = do
   return (counts', us2)
  where
   reportStart ss us = put ("Running " ++ showPath (path ss)) True us
-  reportError   = reportProblem "Error:"   "Error in:   "
-  reportFailure = reportProblem "Failure:" "Failure in: "
+  reportError   = reportProblem "Error:"   "Error in:   " 
+  reportFailure = reportProblem "Failure:" "Failure in: " 
   reportProblem p0 p1 msg ss us = put line True us
    where line  = "### " ++ kind ++ path' ++ '\n' : msg
          kind  = if null path' then p0 else p1

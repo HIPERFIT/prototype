@@ -8,8 +8,10 @@ PRICING_ENGINE_DATA=$(GENERIC_PRICING)/Data
 compile_opencl:
 	make -C $(PRICING_ENGINE) clean gpu
 
-build_examples: 
-	cabal configure
+dependencies:
+	cabal install --dependencies-only
+
+build_examples: dependencies
 	cabal build tests
 
 run_examples:
@@ -21,6 +23,6 @@ clean_opencl:
 	rm -f ./finpar/GenericPricing/CppOpenCL/*.ptx
 	rm -rf $(HOME)/.nv/ComputeCache/*
 
-run_web:
+run_web:dependencies
 	cabal build web
 	$(WEB)
