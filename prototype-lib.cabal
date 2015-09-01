@@ -58,7 +58,6 @@ executable             web
                      , http-types >= 0.8.5
                      , monad-logger >= 0.3.11.1
                      , mtl >= 2.2.1
-                     , old-locale >= 1.0.0.6
                      , persistent
                      , persistent-sqlite
                      , persistent-template

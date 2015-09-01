@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds, FlexibleContexts #-}
 module CodeGen.DataGen where
 
 import Numeric
