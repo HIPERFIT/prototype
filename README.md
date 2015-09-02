@@ -2,7 +2,7 @@ Prototype is haskell library for integration contract language and parallel pric
 
 Requirements
 ------------
-GHC 7.10.1
+GHC >= 7.8.3
 In addition to libraries listed in .cabal file some system packages are required for hmatrix lib. Here is information on hmatrix requirements: https://github.com/albertoruiz/hmatrix/blob/master/INSTALL.md
 
 Running
