@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -5,6 +6,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE ExistentialQuantification, StandaloneDeriving  #-}
+
 module TypeClass where
 
 import Data.Data
@@ -20,17 +23,29 @@ class CGUIRep a where
     toForm = gtoForm
 -}
 
-class GUIRep f where
-    gtoForm :: Proxy f  -> [(String, TypeRep)]
+data FormField b = forall a. (Field a b, Show a) => MkField (Proxy a)
 
-instance (GUIRep a, GUIRep b) => GUIRep (a :*: b) where
-    gtoForm _ = gtoForm (Proxy :: Proxy a) ++ gtoForm (Proxy :: Proxy b)
+deriving instance (Show (FormField b))
 
-instance (Selector s, Typeable t) => GUIRep (M1 S s (K1 R t)) where
-    gtoForm _ = [(selName (undefined :: M1 S s (K1 R t) ()), typeOf (undefined :: t))]
+pack :: (Field a b, Show a) => Proxy a -> FormField b
+pack = MkField
 
-instance (GUIRep f) => GUIRep (M1 D x f) where
+-- TODO: use proper type instead of String for default value
+-- (should be Maybe a, but it doesn't work well with existential)
+class Field a b where
+    fieldHtml :: Proxy a -> Maybe String -> String -> b
+
+class GUIRep f b where
+    gtoForm :: Proxy f  -> [(String, FormField b)]
+
+instance (GUIRep a b, GUIRep a1 b) => GUIRep (a :*: a1) b where
+    gtoForm _ = gtoForm (Proxy :: Proxy a) ++ gtoForm (Proxy :: Proxy a1)
+
+instance (Selector s, Field t b, Show t) => GUIRep (M1 S s (K1 R t)) b where
+    gtoForm _ = [(selName (undefined :: M1 S s (K1 R t) ()), pack (Proxy :: Proxy t))]
+
+instance (GUIRep f b) => GUIRep (M1 D x f) b where
     gtoForm _ = gtoForm (Proxy :: Proxy f)
 
-instance (GUIRep f) => GUIRep (M1 C x f) where
+instance (GUIRep f b) => GUIRep (M1 C x f) b where
     gtoForm _ = gtoForm (Proxy :: Proxy f)

@@ -10,6 +10,7 @@ import TypeClass
 import CodeGen.DataGen (ppDouble)
 import PersistentData
 import qualified DB
+import qualified Fields as F
 
 import Data.Time
 import Web.Scotty hiding (body, params, text)
@@ -227,53 +228,12 @@ pricingForm defaults = mconcat $ map f $ gtoForm (Proxy :: Proxy (Rep PricingFor
     where
       f item@(name, typeRep) = labeledFieldWithDefault (defaults M.! name) item
 
+labeledFieldWithDefault :: Maybe String -> (String, FormField Html) -> Html
+labeledFieldWithDefault defaultVal (name, tr)  = div ! class_ "form-group" $ do
+                                                   label $ string $ capFirst name
+                                                   fieldWithDefault defaultVal (name, tr)
+fieldWithDefault = F.renderField
+
 labeledField = labeledFieldWithDefault Nothing
-
-labeledFieldWithDefault :: Maybe String -> (String, TypeRep) -> Html
-labeledFieldWithDefault defaultVal (name, tr) | tr == typeOf (undefined :: Bool) = div ! class_ "checkbox" $ label $ do
-                                                                          boolField defaultVal name
-                                                                          string $ capFirst name
-                                              | otherwise = div ! class_ "form-group" $ do
-                                                              label $ string $ capFirst name
-                                                              fieldWithDefault defaultVal (name, tr)
-
+              
 field = fieldWithDefault Nothing
-
-fieldWithDefault :: Maybe String -> (String, TypeRep) -> Html
-fieldWithDefault defaultVal (name, tr) | tr == typeOf (undefined :: Double) ||  tr == typeOf (undefined :: Int)  = numField defaultVal name
-                                       -- possibly, we should add support for Maybe for other type of fields
-                                       | tr == typeOf (undefined :: Day) || tr == typeOf (undefined :: Maybe Day)  = dateField defaultVal name 
-                                       | tr == typeOf (undefined :: Underlying) = selectField defaultVal name
-                                       | tr == typeOf (undefined :: T.Text)     = textField defaultVal name
-                                       | tr == typeOf (undefined :: PercentField) = percentField defaultVal name
-                                       | tr == typeOf (undefined :: Bool) = boolField defaultVal name
-
-numField :: Maybe String -> String -> Html
-numField defaultVal fName  = input ! type_ "text" ! class_ "form-control" ! name (stringValue fName) 
-                                   ! dataAttribute "datatype" "Double" ! value (stringValue (fromMaybe "" defaultVal))
-
-dateField :: Maybe String -> String -> Html
-dateField defaultVal fName = div ! class_ "input-group date" ! id (stringValue (fName ++ "Picker")) $ 
-                         do
-                           input ! type_ "text" ! class_ "form-control" ! name (stringValue fName) ! value (stringValue (fromMaybe "" defaultVal))
-                           span ! class_ "input-group-addon" $ 
-                                i ! class_ "glyphicon glyphicon-calendar" $ ""
-
--- TODO: add defaul value
-selectField :: Maybe String -> String -> Html
-selectField defaultVal fName = select ! class_ "form-control selectpicker" ! name (stringValue fName)
-                                  ! dataAttribute "datatype" "Underlying" $ ""
-
-percentField :: Maybe String -> String -> Html
-percentField defaultVal fName = do
-  div ! class_ "input-group" $ do
-                       input ! type_ "text" ! class_ "form-control" ! name (stringValue fName) ! dataAttribute "datatype" "PercentField"
-                             ! value (stringValue (fromMaybe "" defaultVal))
-                       span ! class_ "input-group-addon" $ "%"
-
-textField :: Maybe String -> String -> Html
-textField defaultVal fName = input ! type_ "text" ! class_ "form-control" ! name (stringValue fName) ! value (stringValue (fromMaybe "" defaultVal))
-
--- TODO: add default value
-boolField :: Maybe String -> String -> Html
-boolField defaultVal fName = input ! type_ "checkbox" ! name (stringValue fName) ! dataAttribute "datatype" "Bool"

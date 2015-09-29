@@ -16,6 +16,7 @@ import Data
 import DataProviders.Csv
 import DataProviders.Common
 import PersistentData
+import Fields
 
 {-@CODE@-}
 data RainbowOption = RO {

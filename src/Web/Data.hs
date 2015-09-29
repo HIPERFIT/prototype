@@ -4,6 +4,7 @@ module Data where
 
 import Data.Typeable (TypeRep, Typeable)
 import TypeClass
+import Text.Blaze.Html5 (Html)
 import Data.Time
 import GHC.Generics
 import Data.Text (Text)
@@ -16,7 +17,7 @@ fromPercentField (PercentField a) = a / 100
 
 data ContractGUIRepr  =
     GUIRepr { guiLabel   :: String
-            , formFields :: [(String, TypeRep)]
+            , formFields :: [(String, FormField Html)]
             , url        :: String }
 
 data CommonContractData = CommonContractData { nominal   :: Int
@@ -38,3 +39,4 @@ data CorrForm = CorrForm { corrUnd1 :: Text
                          , corrDate :: Day
                          , corrVal  :: Double }
                 deriving Generic
+
