@@ -1,5 +1,6 @@
 TESTS=./dist/build/tests/tests
 WEB=./dist/build/web/web
+API=./dist/build/API/API
 GENERIC_PRICING=./finpar/GenericPricing
 PRICING_ENGINE=$(GENERIC_PRICING)/CppOpenCL
 PRICING_ENGINE_CODE=$(PRICING_ENGINE)/ContractDefs
@@ -26,3 +27,7 @@ clean_opencl:
 run_web:dependencies
 	cabal build web
 	$(WEB)
+
+run_api:dependencies
+	cabal build API
+	$(API)
