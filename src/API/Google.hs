@@ -60,4 +60,7 @@ get_data_csv xs = do
 
 get_close id start_date end_date = do
     s <- pull_data id start_date end_date
-    return (map get_data_csv (tail(splitOn "\n" s)))
+    let xs = splitOn "\n" s
+    let ys = filter (/="") xs
+    return( map get_data_csv (tail(ys)))
+

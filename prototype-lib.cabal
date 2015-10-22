@@ -82,3 +82,5 @@ executable             API
                      , HTTP
                      , bytestring >= 0.10.4.0
                      , split
+                     , sqlite-simple
+                     , text
