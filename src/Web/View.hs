@@ -147,12 +147,15 @@ marketDataView quotes corrs = blaze $ layout "Market Data" (Just (snd marketData
                    ul ! class_ "nav nav-tabs" $ do
                      li ! class_ "active" $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#quotes" $ "Quotes"
                      li  $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#corrs" $ "Correlations"
+                     li  $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#graphs" $ "Graphs"
                    div ! class_ "tab-content" $ do
                      div! id "quotes" ! class_ "tab-pane fade in active" $ 
                         quotesTable quotes
                      div ! id "corrs" ! class_ "tab-pane fade" $ 
                        corrsTable corrs
-      
+                     div ! id "graphs" ! class_ "tab-pane fade" $ 
+                       graphsPage
+
 
 quotesTable quotes = buildTable (buildThead headerRow, buildTbody $ (fields ++ [addBtn]) : map toRow quotes)
     where
@@ -169,6 +172,13 @@ corrsTable corrs = buildTable (buildThead headerRow, buildTbody $ (fields ++ [ad
                                    , dataDelLink (encode (und1, und2, formatDate d)) "/marketData/corrs/"]
       fields = map field $ gtoForm (Proxy :: Proxy (Rep CorrForm))
       addBtn = a ! class_ "btn btn-lg btn-primary" ! id "add-data-corrs" ! href "/marketData/corrs/" $ "Add"
+
+
+
+graphsPage = "Hello, world!"
+
+
+
 
 portfolioView portfolio defaults = blaze $ layout "My Portfolio" (Just (snd myPortfolioMenuItem)) $ do
                             div ! class_ "row" $ do
