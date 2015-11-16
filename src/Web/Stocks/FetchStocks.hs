@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
-module FetchStocks where
+module Stocks.FetchStocks where
 
-import Yahoo as Yahoo
-import Google as Google
+import Stocks.Yahoo as Yahoo
+import Stocks.Google as Google
 import Database.SQLite.Simple
 import Database.SQLite.Simple.FromRow
 

@@ -1,4 +1,4 @@
-module Yahoo where
+module Stocks.Yahoo where
 
 import Network.HTTP
 import Data.List.Split

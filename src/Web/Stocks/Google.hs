@@ -1,4 +1,4 @@
-module Google where
+module Stocks.Google where
 
 import Network.HTTP
 import Data.List.Split
