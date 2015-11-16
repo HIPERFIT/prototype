@@ -20,6 +20,7 @@ import Serialization
 import Utils
 import CodeGen.Utils
 import Auth
+import Stocks.FetchStocks
 
 import Web.Scotty hiding (body, params)
 import Web.Scotty.Internal.Types hiding (Env)
@@ -110,6 +111,10 @@ defaultService allContracts dataProvider = do
       key <- jsonData :: ActionM (Text, Day)
       liftIO $ runDb $ P.deleteBy $ (uncurry MDEntry) key
       text "OK"
+    get   "/marketData/stocks/" $ basicAuth $ do
+      --stockData <- getStocks "AAPL" "2015-09-28" "2015-10-05" "Yahoo"
+      --json stockData
+      text "hello, world!"
     middleware $ staticPolicy (addBase "src/Web/static")
 
 api contractType inputData mkContr = 

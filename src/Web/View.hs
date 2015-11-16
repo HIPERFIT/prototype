@@ -175,7 +175,11 @@ corrsTable corrs = buildTable (buildThead headerRow, buildTbody $ (fields ++ [ad
 
 
 
-graphsPage = "Hello, world!"
+graphsPage = buildTable (buildThead headerRow, buildTbody $ [(fields ++ [addBtn])])
+    where
+      fields = map field $ gtoForm (Proxy :: Proxy (Rep StockGraphForm))
+      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "show-stock-graph" $ "Add"
+      headerRow = ["Underlying", "Starting date", "End date", ""]
 
 
 
