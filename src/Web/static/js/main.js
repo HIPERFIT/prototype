@@ -80,6 +80,54 @@ function hideAlerts() {
     $('#pricing-form-alert, #error, #result').empty().hide();
 }
 
+
+function createChart() {
+    var startdate=$('[name="sstartDate"]').val();
+    var enddate=$('[name="sendDate"]').val();
+    var stock_id1=$('[name="sUnderlying1"]').val();
+    var stock_id2=$('[name="sUnderlying2"]').val();
+    var normalize=$('[name="normalize"]').is(":checked");
+    $.get("/marketData/stocks/"+stock_id1,{"startdate": startdate, "enddate" : enddate})
+        .done(function(resp) {
+            resp.reverse();
+            var labels=[];
+            var data=[];
+            var options = {datasetFill : false};
+            for(var i=0; i<resp.length; i++)
+            {
+                labels.push(resp[i][0]);
+                data.push(resp[i][1]);
+            }
+            if(stock_id2!="")
+            {
+                $.get("/marketData/stocks/"+stock_id2,{"startdate": startdate, "enddate" : enddate})
+                    .done(function(resp2) {
+                        resp2.reverse();
+                        multiplier=1;
+                        if(normalize)
+                        {
+                            multiplier = parseFloat(resp[0][1]) / parseFloat(resp2[0][1]);
+                        }
+                        var data2=[];
+                        for(var i=0; i<resp2.length; i++)
+                        {
+                            data2.push(parseFloat(resp2[i][1])*multiplier);
+                        }
+                        var full_data = {labels: labels, datasets: [{label: stock_id1, data: data},{label: stock_id2, data: data2}]};
+                            var ctx = document.getElementById("stockChart").getContext("2d");
+                            var myLineChart = new Chart(ctx).Line(full_data, options);
+                    })
+            }
+            else
+            {
+                var full_data = {labels: labels, datasets: [{label: stock_id1, data: data}]};
+                var ctx = document.getElementById("stockChart").getContext("2d");
+                var myLineChart = new Chart(ctx).Line(full_data, options);
+            }
+        })
+}
+
+
 $(document).ready(function() {
     $('.selectpicker').selectpicker();
     $('.date').datepicker({autoclose: true,
@@ -165,4 +213,9 @@ $(document).ready(function() {
     })
     $('input[name="currentDate"], input[name="interestRate"], input[name="iterations"]').keydown(function() {invalidateResult($('.price-output, .total-output'))});
     $('input[name="currentDate"]').change(function() {invalidateResult($('.price-output, .total-output'))});
+
+    $('#stockgraph').click(function() {
+        createChart();
+        return false;
+    });
 })

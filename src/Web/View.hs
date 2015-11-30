@@ -26,7 +26,7 @@ import Text.Blaze.Html5 (Html, a, body, button,
                          option, button, span, i, select, 
                          table, tr, td, th, stringValue, tbody, 
                          thead, fieldset, legend, AttributeValue,
-                         pre)
+                         pre, canvas)
 import Text.Blaze.Html5.Attributes (charset, class_, content, href,
                                     httpEquiv, id, media, name,
                                     placeholder, rel, src, type_, 
@@ -76,6 +76,7 @@ layout t activeMenuItem pageContent = docTypeHtml $ do
                         script ! src "//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" $ mempty
                         script ! src "//cdnjs.cloudflare.com/ajax/libs/spin.js/2.0.1/jquery.spin.min.js" $ mempty
                         script ! src "//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.1/js/bootstrap-datepicker.min.js" $ mempty
+                        script ! src "/js/chart.js" $ mempty
                         script ! src "/js/main.js" $ mempty
                         script ! src "//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js" $ mempty
                         script ! src "//cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.6.3/js/bootstrap-select.min.js" $ mempty
@@ -149,12 +150,14 @@ marketDataView quotes corrs = blaze $ layout "Market Data" (Just (snd marketData
                      li  $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#corrs" $ "Correlations"
                      li  $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#graphs" $ "Graphs"
                    div ! class_ "tab-content" $ do
-                     div! id "quotes" ! class_ "tab-pane fade in active" $ 
+                     div! id "quotes" ! class_ "tab-pane fade in active" $
                         quotesTable quotes
-                     div ! id "corrs" ! class_ "tab-pane fade" $ 
+                     div ! id "corrs" ! class_ "tab-pane fade" $
                        corrsTable corrs
-                     div ! id "graphs" ! class_ "tab-pane fade" $ 
+                     div ! id "graphs" ! class_ "tab-pane fade" $
                        graphsPage
+                     canvas ! id "stockChart" $ ""
+
 
 
 quotesTable quotes = buildTable (buildThead headerRow, buildTbody $ (fields ++ [addBtn]) : map toRow quotes)
@@ -178,8 +181,8 @@ corrsTable corrs = buildTable (buildThead headerRow, buildTbody $ (fields ++ [ad
 graphsPage = buildTable (buildThead headerRow, buildTbody $ [(fields ++ [addBtn])])
     where
       fields = map field $ gtoForm (Proxy :: Proxy (Rep StockGraphForm))
-      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "show-stock-graph" $ "Add"
-      headerRow = ["Underlying", "Starting date", "End date", ""]
+      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "stockgraph" ! href "#stockgraph" $ "Show"
+      headerRow = ["Underlying 1", "Underlying 2", "Starting date", "End date", "Normalize?", ""]
 
 
 

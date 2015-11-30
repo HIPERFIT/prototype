@@ -32,7 +32,8 @@ fromDb id start_date end_date = do
 stocks_outdated id = do
     conn <- open "proto.sqlite3"
     rows <- query conn "select value from stocks where strftime('%s','now') - strftime('%s',created) < 7200 and stock_id=? limit 1" (Only (id :: String)) :: IO [Only(String)]
-    return((length rows)==0)
+    --return((length rows)==0)
+    return(True)
 
 getStocks id start_date end_date source = do
     b <- stocks_outdated id

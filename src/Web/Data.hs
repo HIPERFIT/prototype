@@ -40,8 +40,10 @@ data CorrForm = CorrForm { corrUnd1 :: Text
                          , corrVal  :: Double }
                 deriving Generic
 
-data StockGraphForm = StockGraphForm { sUnderlying :: Text
+data StockGraphForm = StockGraphForm { sUnderlying1 :: Text
+                                     , sUnderlying2 :: Text
                                      , sstartDate :: Day
-                                     , sendDate :: Day }
+                                     , sendDate :: Day
+                                     , normalize :: Bool }
                 deriving Generic
 

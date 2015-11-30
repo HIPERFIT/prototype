@@ -111,10 +111,12 @@ defaultService allContracts dataProvider = do
       key <- jsonData :: ActionM (Text, Day)
       liftIO $ runDb $ P.deleteBy $ (uncurry MDEntry) key
       text "OK"
-    get   "/marketData/stocks/" $ basicAuth $ do
-      --stockData <- getStocks "AAPL" "2015-09-28" "2015-10-05" "Yahoo"
-      --json stockData
-      text "hello, world!"
+    get   "/marketData/stocks/:id" $ basicAuth $ do
+      stock_id <- param "id"
+      startdate <- param "startdate"
+      enddate <- param "enddate"
+      stockData <- liftIO $ getStocks stock_id startdate enddate "Yahoo"
+      json stockData
     middleware $ staticPolicy (addBase "src/Web/static")
 
 api contractType inputData mkContr = 
