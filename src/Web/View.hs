@@ -148,15 +148,16 @@ marketDataView quotes corrs = blaze $ layout "Market Data" (Just (snd marketData
                    ul ! class_ "nav nav-tabs" $ do
                      li ! class_ "active" $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#quotes" $ "Quotes"
                      li  $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#corrs" $ "Correlations"
-                     li  $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#graphs" $ "Graphs"
+                     li  $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#stockgraphs" $ "Stock Graphs"
                    div ! class_ "tab-content" $ do
                      div! id "quotes" ! class_ "tab-pane fade in active" $
                         quotesTable quotes
                      div ! id "corrs" ! class_ "tab-pane fade" $
                        corrsTable corrs
-                     div ! id "graphs" ! class_ "tab-pane fade" $
-                       graphsPage
-                     canvas ! id "stockChart" $ ""
+                     div ! id "stockgraphs" ! class_ "tab-pane fade" $ do
+                       stockgraphsPage
+                       div ! id "stocklegend" $ ""
+                       canvas ! id "stockChart" $ ""
 
 
 
@@ -178,10 +179,10 @@ corrsTable corrs = buildTable (buildThead headerRow, buildTbody $ (fields ++ [ad
 
 
 
-graphsPage = buildTable (buildThead headerRow, buildTbody $ [(fields ++ [addBtn])])
+stockgraphsPage = buildTable (buildThead headerRow, buildTbody $ [(fields ++ [addBtn])])
     where
       fields = map field $ gtoForm (Proxy :: Proxy (Rep StockGraphForm))
-      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "stockgraph" ! href "#stockgraph" $ "Show"
+      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "stockgraph-btn" ! href "#stockgraph" $ "Show"
       headerRow = ["Underlying 1", "Underlying 2", "Starting date", "End date", "Normalize?", ""]
 
 

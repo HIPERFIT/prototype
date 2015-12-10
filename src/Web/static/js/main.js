@@ -87,13 +87,16 @@ function createChart() {
     var stock_id1=$('[name="sUnderlying1"]').val();
     var stock_id2=$('[name="sUnderlying2"]').val();
     var normalize=$('[name="normalize"]').is(":checked");
+    var color1="#FF00FF";
+    var color2="#00FF00";
     $.get("/marketData/stocks/"+stock_id1,{"startdate": startdate, "enddate" : enddate})
         .done(function(resp) {
             resp.reverse();
             var labels=[];
             var data=[];
             var options = {datasetFill : false};
-            for(var i=0; i<resp.length; i++)
+            scale=Math.ceil(resp.length/100);
+            for(var i=0; i<resp.length; i+=scale)
             {
                 labels.push(resp[i][0]);
                 data.push(resp[i][1]);
@@ -109,22 +112,27 @@ function createChart() {
                             multiplier = parseFloat(resp[0][1]) / parseFloat(resp2[0][1]);
                         }
                         var data2=[];
-                        for(var i=0; i<resp2.length; i++)
+                        for(var i=0; i<resp2.length; i+=scale)
                         {
                             data2.push(parseFloat(resp2[i][1])*multiplier);
                         }
-                        var full_data = {labels: labels, datasets: [{label: stock_id1, data: data},{label: stock_id2, data: data2}]};
+                        var full_data = {labels: labels, datasets: [{label: stock_id1, data: data, strokeColor: color1, pointColor: color1},{label: stock_id2, data: data2, strokeColor: color2, pointColor: color2}]};
                             var ctx = document.getElementById("stockChart").getContext("2d");
                             var myLineChart = new Chart(ctx).Line(full_data, options);
                     })
             }
             else
             {
-                var full_data = {labels: labels, datasets: [{label: stock_id1, data: data}]};
+                var full_data = {labels: labels, datasets: [{label: stock_id1, data: data, strokeColor: color1, pointColor: color1}]};
                 var ctx = document.getElementById("stockChart").getContext("2d");
                 var myLineChart = new Chart(ctx).Line(full_data, options);
             }
         })
+    var legend="<div class=\"stocklegendcolor\" style=\"background-color:"+color1+";float:left;margin-right:5px;height:20px;width:20px\"></div> "+stock_id1+"<br>";
+    if(stock_id2!="")
+        legend+="<div class=\"stocklegendcolor\" style=\"background-color:"+color2+";float:left;margin-right:5px;height:20px;width:20px\"></div> "+stock_id2+"<br><br>";
+    $('#stocklegend').html(legend);
+
 }
 
 
@@ -214,7 +222,7 @@ $(document).ready(function() {
     $('input[name="currentDate"], input[name="interestRate"], input[name="iterations"]').keydown(function() {invalidateResult($('.price-output, .total-output'))});
     $('input[name="currentDate"]').change(function() {invalidateResult($('.price-output, .total-output'))});
 
-    $('#stockgraph').click(function() {
+    $('#stockgraph-btn').click(function() {
         createChart();
         return false;
     });
