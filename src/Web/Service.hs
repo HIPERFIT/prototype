@@ -117,6 +117,8 @@ defaultService allContracts dataProvider = do
       enddate <- param "enddate"
       stockData <- liftIO $ getStocks stock_id startdate enddate "Yahoo"
       json stockData
+    get   "/contractGraph/" $ basicAuth $ do
+      contractGraphView
     middleware $ staticPolicy (addBase "src/Web/static")
 
 api contractType inputData mkContr = 
