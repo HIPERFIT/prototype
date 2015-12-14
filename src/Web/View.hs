@@ -44,11 +44,12 @@ import Control.Monad (forM_)
 import qualified Data.Map as M
 
 
-menuItems = [instrumentsMenuItem, myPortfolioMenuItem, marketDataMenuItem, modelDataMenuItem]
+menuItems = [instrumentsMenuItem, myPortfolioMenuItem, marketDataMenuItem, modelDataMenuItem, contractGraphMenuItem]
 instrumentsMenuItem = ("Instruments", "/")
 myPortfolioMenuItem = ("My Portfolio", "/portfolio/")
 marketDataMenuItem = ("Market Data", "/marketData/view/")
 modelDataMenuItem = ("Model Data", "/modelData/")
+contractGraphMenuItem = ("Contract Graph", "/contractGraph/")
 contractsBaseUrl = "/contracts/"
 
 instance FromJSON Day where
@@ -228,7 +229,14 @@ modelDataView md = do
      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "add-data" ! href "/modelData/" $ "Add"
      delLink und d = a ! dataAttribute "und" (stringValue und) ! dataAttribute "date" (stringValue (formatDate d))
                        ! href "/modelData/" ! class_ "del-item" $ i ! class_ "glyphicon glyphicon-trash" $ ""
-          
+
+
+contractGraphView = blaze $ layout "Contract Graph" (Just (snd contractGraphMenuItem)) $
+    "Hello, world!"
+
+
+
+
 buildTable (tblHead, tblBody) = table ! class_ "table table-striped" $ do
                                   tblHead
                                   tblBody
