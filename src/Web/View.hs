@@ -51,8 +51,8 @@ marketDataMenuItem = ("Market Data", "/marketData/view/")
 modelDataMenuItem = ("Model Data", "/modelData/")
 contractsBaseUrl = "/contracts/"
 
-instance FromJSON Day where
-    parseJSON (String s) = return $ parseDate $ T.unpack s
+--instance FromJSON Day where
+--    parseJSON (String s) = return $ parseDate $ T.unpack s
 
 pet = preEscapedText
 
