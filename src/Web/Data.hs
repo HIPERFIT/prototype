@@ -40,10 +40,18 @@ data CorrForm = CorrForm { corrUnd1 :: Text
                          , corrVal  :: Double }
                 deriving Generic
 
-data StockGraphForm = StockGraphForm { sUnderlying1 :: Text
-                                     , sUnderlying2 :: Text
+data StockGraphForm = StockGraphForm { sUnderlying1 :: Underlying
+                                     , sUnderlying2 :: Underlying
                                      , sstartDate :: Day
                                      , sendDate :: Day
                                      , normalize :: Bool }
                 deriving Generic
+
+data ContractGraphForm = ContractGraphForm { ccontract :: Underlying
+                                           , cstartDate :: Day
+                                           , cendDate :: Day
+                                           , cinterestRate :: PercentField
+                                           , citerations   :: Int }
+                deriving Generic
+
 

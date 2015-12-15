@@ -25,3 +25,6 @@ layoutCss = render $ do
               element "#stockChart" ? do
                 width (auto)
                 height (px 500)
+              element "#contractChart" ? do
+                width (auto)
+                height (px 500)

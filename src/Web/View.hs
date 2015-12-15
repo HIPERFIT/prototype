@@ -157,7 +157,6 @@ marketDataView quotes corrs = blaze $ layout "Market Data" (Just (snd marketData
                        corrsTable corrs
                      div ! id "stockgraphs" ! class_ "tab-pane fade" $ do
                        stockgraphsPage
-                       div ! id "stocklegend" $ ""
                        canvas ! id "stockChart" $ ""
 
 
@@ -186,6 +185,12 @@ stockgraphsPage = buildTable (buildThead headerRow, buildTbody $ [(fields ++ [ad
       addBtn = a ! class_ "btn btn-lg btn-primary" ! id "stockgraph-btn" ! href "#stockgraph" $ "Show"
       headerRow = ["Underlying 1", "Underlying 2", "Starting date", "End date", "Normalize?", ""]
 
+
+contractgraphsPage = buildTable (buildThead headerRow, buildTbody $ [(fields ++ [addBtn])])
+    where
+      fields = map field $ gtoForm (Proxy :: Proxy (Rep ContractGraphForm))
+      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "contractgraph-btn" ! href "#contractgraph" $ "Show"
+      headerRow = ["Underlying", "Starting date", "End date", "InterestRate", "Interations", ""]
 
 
 
@@ -231,8 +236,10 @@ modelDataView md = do
                        ! href "/modelData/" ! class_ "del-item" $ i ! class_ "glyphicon glyphicon-trash" $ ""
 
 
-contractGraphView = blaze $ layout "Contract Graph" (Just (snd contractGraphMenuItem)) $
-    "Hello, world!"
+contractGraphView = blaze $ layout "Contract Graph" (Just (snd contractGraphMenuItem)) $ do
+    contractgraphsPage
+    div ! id "contractlegend" $ ""
+    canvas ! id "contractChart" $ ""
 
 
 

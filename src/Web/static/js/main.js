@@ -81,7 +81,7 @@ function hideAlerts() {
 }
 
 
-function createChart() {
+function createChartStock() {
     var startdate=$('[name="sstartDate"]').val();
     var enddate=$('[name="sendDate"]').val();
     var stock_id1=$('[name="sUnderlying1"]').val();
@@ -133,6 +133,31 @@ function createChart() {
         legend+="<div class=\"stocklegendcolor\" style=\"background-color:"+color2+";float:left;margin-right:5px;height:20px;width:20px\"></div> "+stock_id2+"<br><br>";
     $('#stocklegend').html(legend);
 
+}
+
+
+function createChartContract()
+{
+    var startdate=$('[name="cstartDate"]').val();
+    var enddate=$('[name="cendDate"]').val();
+    var stock_id=$('[name="ccontract"]').val();
+    var color="#00FF00";
+    $.get("/marketData/stocks/"+stock_id,{"startdate": startdate, "enddate" : enddate})
+        .done(function(resp) {
+            resp.reverse();
+            var labels=[];
+            var data=[];
+            var options = {datasetFill : false};
+            scale=Math.ceil(resp.length/100);
+            for(var i=0; i<resp.length; i+=scale)
+            {
+                labels.push(resp[i][0]);
+                data.push(resp[i][1]);
+            }
+            var full_data = {labels: labels, datasets: [{label: stock_id, data: data, strokeColor: color, pointColor: color}]};
+            var ctx = document.getElementById("contractChart").getContext("2d");
+            var myLineChart = new Chart(ctx).Line(full_data, options);
+        })
 }
 
 
@@ -223,7 +248,12 @@ $(document).ready(function() {
     $('input[name="currentDate"]').change(function() {invalidateResult($('.price-output, .total-output'))});
 
     $('#stockgraph-btn').click(function() {
-        createChart();
+        createChartStock();
+        return false;
+    });
+
+    $('#contractgraph-btn').click(function() {
+        createChartContract();
         return false;
     });
 })
