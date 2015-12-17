@@ -124,11 +124,7 @@ defaultService allContracts dataProvider = do
       startdate <- param "startdate"
       enddate <- param "enddate"
       a <- liftIO $ update_db_quotes stock_id startdate enddate "Yahoo"
-      pricingForm <- (jsonParam "conf") :: ActionM PricingForm
-      pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
-      res <- liftIO $ mapM (maybeValuate pricingForm dataProvider) $ map P.entityVal pItems
-      json $ object [ "prices" .= res
-        , "total"  .= (sum $ map (fromMaybe 0) res) ]
+      text "hello"
     middleware $ staticPolicy (addBase "src/Web/static")
 
 api contractType inputData mkContr = 
