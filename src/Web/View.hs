@@ -52,8 +52,8 @@ modelDataMenuItem = ("Model Data", "/modelData/")
 contractGraphMenuItem = ("Contract Graph", "/contractGraph/")
 contractsBaseUrl = "/contracts/"
 
---instance FromJSON Day where
---    parseJSON (String s) = return $ parseDate $ T.unpack s
+instance FromJSON Day where
+    parseJSON (String s) = return $ parseDate $ T.unpack s
 
 pet = preEscapedText
 
@@ -157,6 +157,7 @@ marketDataView quotes corrs = blaze $ layout "Market Data" (Just (snd marketData
                        corrsTable corrs
                      div ! id "stockgraphs" ! class_ "tab-pane fade" $ do
                        stockgraphsPage
+                       div ! id "stocklegend" $ ""
                        canvas ! id "stockChart" $ ""
 
 
@@ -238,7 +239,6 @@ modelDataView md = do
 
 contractGraphView = blaze $ layout "Contract Graph" (Just (snd contractGraphMenuItem)) $ do
     contractgraphsPage
-    div ! id "contractlegend" $ ""
     canvas ! id "contractChart" $ ""
 
 

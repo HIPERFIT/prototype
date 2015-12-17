@@ -142,9 +142,10 @@ function createChartContract()
     var enddate=$('[name="cendDate"]').val();
     var stock_id=$('[name="ccontract"]').val();
     var color="#00FF00";
-    $.get("/marketData/stocks/"+stock_id,{"startdate": startdate, "enddate" : enddate})
+    $.get("/contractGraph/"+stock_id,{"startdate": startdate, "enddate" : enddate})
         .done(function(resp) {
-            resp.reverse();
+            alert(resp);
+            /*resp.reverse();
             var labels=[];
             var data=[];
             var options = {datasetFill : false};
@@ -157,7 +158,7 @@ function createChartContract()
             var full_data = {labels: labels, datasets: [{label: stock_id, data: data, strokeColor: color, pointColor: color}]};
             var ctx = document.getElementById("contractChart").getContext("2d");
             var myLineChart = new Chart(ctx).Line(full_data, options);
-        })
+        */})
 }
 
 

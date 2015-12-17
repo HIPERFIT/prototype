@@ -1,10 +1,15 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes, TemplateHaskell, TypeFamilies, GeneralizedNewtypeDeriving, DeriveGeneric#-}
+{-# LANGUAGE OverloadedStrings, GADTs, FlexibleContexts, MultiParamTypeClasses #-}
 module Stocks.FetchStocks where
 
 import Stocks.Yahoo as Yahoo
 import Stocks.Google as Google
 import Database.SQLite.Simple
 import Database.SQLite.Simple.FromRow
+--import PersistentData
+--import DB
+--import qualified Database.Persist as P
+--import Control.Monad.Trans
 
 
 fetch id start_date end_date "Yahoo" = Yahoo.get_close id start_date end_date
@@ -40,3 +45,14 @@ getStocks id start_date end_date source = do
     if b
     then updateDatabase id start_date end_date source
     else fromDb id start_date end_date
+
+transToDbQuotes conn id (date,value) = do
+    execute conn "INSERT INTO db_quotes (underlying,date,value,user_id) VALUES(?,?,?,1)"  ([id :: String, date :: String, value :: String])
+
+
+update_db_quotes id start_date end_date source = do
+    conn <- open "proto.sqlite3"
+    execute conn "DELETE from db_quotes where underlying=?" (Only(id :: String))
+    stocks <- getStocks id start_date end_date source
+    mapM_ (transToDbQuotes conn id) stocks
+    return([])
