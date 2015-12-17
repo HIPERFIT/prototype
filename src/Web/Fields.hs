@@ -41,6 +41,7 @@ instance Field String Html where
     fieldHtml _ defaultVal fName = select ! class_ "form-control selectpicker" ! name (stringValue fName)
                                    ! dataAttribute "datatype" "Underlying" $ ""
 
+
 instance Field Text Html where
     fieldHtml _ =  genericField
 

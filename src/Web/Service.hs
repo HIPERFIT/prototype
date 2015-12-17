@@ -119,12 +119,16 @@ defaultService allContracts dataProvider = do
       json stockData
     get   "/contractGraph/" $ basicAuth $ do
       contractGraphView
-    get   "/contractGraph/:id" $ basicAuth $ do
-      stock_id <- param "id"
-      startdate <- param "startdate"
-      enddate <- param "enddate"
-      a <- liftIO $ update_db_quotes stock_id startdate enddate "Yahoo"
+    get   "/contractGraph/contracts/:id" $ basicAuth $ do
+      --stock_id <- param "id"
+      --startdate <- param "startdate"
+      --enddate <- param "enddate"
+      --a <- liftIO $ update_db_quotes stock_id startdate enddate "Yahoo"
       text "hello"
+    get   "/contractGraph/listOfContracts/" $ basicAuth $ do
+      pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
+      let pItems2 = map (withHorizon . fromEntity) pItems
+      json (map (\(x,y,z) -> x) pItems2)
     middleware $ staticPolicy (addBase "src/Web/static")
 
 api contractType inputData mkContr = 

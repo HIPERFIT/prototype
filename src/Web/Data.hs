@@ -47,7 +47,7 @@ data StockGraphForm = StockGraphForm { sUnderlying1 :: Underlying
                                      , normalize :: Bool }
                 deriving Generic
 
-data ContractGraphForm = ContractGraphForm { ccontract :: Underlying
+data ContractGraphForm = ContractGraphForm { ccontract :: String
                                            , cstartDate :: Day
                                            , cendDate :: Day
                                            , cinterestRate :: PercentField

@@ -142,7 +142,7 @@ function createChartContract()
     var enddate=$('[name="cendDate"]').val();
     var stock_id=$('[name="ccontract"]').val();
     var color="#00FF00";
-    $.get("/contractGraph/"+stock_id,{"startdate": startdate, "enddate" : enddate})
+    $.get("/contractGraph/contracts/"+stock_id,{"startdate": startdate, "enddate" : enddate})
         .done(function(resp) {
             alert(resp);
             /*resp.reverse();
@@ -202,7 +202,9 @@ $(document).ready(function() {
             })
             .always(function() {processing(false)});
     });
+    $("select[name='sUnderlying2']").append($("<option/>").val("").text("None"));
     $.get('/marketData/underlyings/', function (data) {populateSelect($("select[data-datatype='Underlying']"), data)});
+    $.get('/contractGraph/listOfContracts/', function (data) {$("select[name='ccontract']").empty(); populateSelect($("select[name='ccontract']"), data)});
     $('.del-pfitem').click(function() {
         $.ajax({
             type: 'DELETE',
