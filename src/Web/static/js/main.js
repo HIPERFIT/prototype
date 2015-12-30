@@ -140,10 +140,12 @@ function createChartContract()
 {
     var startdate=$('[name="cstartDate"]').val();
     var enddate=$('[name="cendDate"]').val();
-    var stock_id=$('[name="ccontract"]').val();
+    var contract=$('[name="ccontract"]').val();
+    var interest=$('[name="cinterestRate"]').val();
+    var iterations=$('[name="citerations"]').val();
     var color="#00FF00";
-    $.get("/contractGraph/contracts/"+stock_id,{"startdate": startdate, "enddate" : enddate})
-        .done(function(resp) {
+    var data = collectData($('.form-control'));
+    $.post("/contractGraph/contracts/",{"conf": JSON.stringify(data)}/*{"cstartDate": startdate, "cendDate" : enddate, "cinterestRate": interest, "citerations": iterations}*/) .done(function(resp) {
             alert(resp);
             /*resp.reverse();
             var labels=[];

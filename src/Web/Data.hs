@@ -48,8 +48,8 @@ data StockGraphForm = StockGraphForm { sUnderlying1 :: Underlying
                 deriving Generic
 
 data ContractGraphForm = ContractGraphForm { ccontract :: String
-                                           , cstartDate :: Day
-                                           , cendDate :: Day
+                                           , cstartDate :: Maybe Day
+                                           , cendDate :: Maybe Day
                                            , cinterestRate :: PercentField
                                            , citerations   :: Int }
                 deriving Generic

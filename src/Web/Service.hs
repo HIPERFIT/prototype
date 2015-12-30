@@ -44,12 +44,14 @@ import Data.Text (Text)
 import Data.Maybe
 import Data.Time.Clock
 import Data.Time.Calendar
+import Data.Time.Format
 
 instance FromJSON CommonContractData
 instance FromJSON PricingForm
 instance FromJSON DataForm
 instance FromJSON CorrForm
 instance FromJSON PercentField
+instance FromJSON ContractGraphForm
 instance ToJSON PercentField
 
 defaultService allContracts dataProvider = do
@@ -119,12 +121,16 @@ defaultService allContracts dataProvider = do
       json stockData
     get   "/contractGraph/" $ basicAuth $ do
       contractGraphView
-    get   "/contractGraph/contracts/:id" $ basicAuth $ do
-      --stock_id <- param "id"
-      --startdate <- param "startdate"
-      --enddate <- param "enddate"
-      --a <- liftIO $ update_db_quotes stock_id startdate enddate "Yahoo"
-      text "hello"
+    post  "/contractGraph/contracts/" $ basicAuth $ do
+      form <- (jsonParam "conf") :: ActionM ContractGraphForm
+      let startdate = maybeDaytoString (cstartDate form)
+      let enddate = maybeDaytoString (cendDate form)
+      a <- liftIO $ update_db_quotes "GOOGL" startdate enddate "Yahoo"
+      let pricingForm = PricingForm {currentDate=cstartDate form,interestRate=cinterestRate form,iterations=citerations form}
+      pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
+      res <- liftIO $ mapM (maybeValuate pricingForm dataProvider) $ map P.entityVal pItems
+      json $ object [ "prices" .= res
+                    , "total"  .= (sum $ map (fromMaybe 0) res) ]
     get   "/contractGraph/listOfContracts/" $ basicAuth $ do
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
       let pItems2 = map (withHorizon . fromEntity) pItems
@@ -217,7 +223,7 @@ valuate pricingForm dataProvider portfItem = do
     mContr = (day2ContrDate sDate, read $ T.unpack $ pFItemContractSpec portfItem)
     cMeta = extractMeta mContr
     allDays = map contrDate2Day (allDates cMeta)
-    unds  = underlyings cMeta      
+    unds  = underlyings cMeta
     getRawQuotes = provideQuotes dataProvider
 
 fromEntity p = (show $ fromSqlKey $ P.entityKey p, P.entityVal p)
@@ -245,3 +251,7 @@ readInstrument name = do
 
 authUser u p | u == "hiperfit" && p == "123" = Authorized
              | otherwise = Unauthorized
+
+
+maybeDaytoString (Just t) =  formatTime defaultTimeLocale "%F" t
+maybeDaytoString Nothing = error "No date given"
