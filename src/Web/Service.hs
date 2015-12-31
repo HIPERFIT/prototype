@@ -131,12 +131,16 @@ defaultService allContracts dataProvider = do
       let pItems2 = map (withHorizon . fromEntity) pItems
       let pfItem_temp = filter (\(x,y,z) -> x==pfiId) pItems2
       let pfItem = (\((x,y,z):xs) -> y) pfItem_temp
+      let sDate = pFItemStartDate pfItem
+      let mContr = (day2ContrDate sDate, read $ T.unpack $ pFItemContractSpec pfItem)
+      let cMeta = extractMeta mContr
+      let unds  = (\(x:xs) -> x) (underlyings cMeta)
 
 
 
       let startdate = daytoString (pFItemStartDate pfItem)
       let enddate = maybeDaytoString (cendDate form)
-      a <- liftIO $ update_db_quotes "GOOGL" startdate enddate "Yahoo"
+      a <- liftIO $ update_db_quotes unds startdate enddate "Yahoo"
       let pricingForm = PricingForm {currentDate=cstartDate form,interestRate=cinterestRate form,iterations=citerations form}
       res <- liftIO $ maybeValuate pricingForm dataProvider pfItem
       json res
