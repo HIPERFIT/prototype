@@ -141,7 +141,7 @@ defaultService allContracts dataProvider = do
       let startdate = daytoString (pFItemStartDate pfItem)
       let enddate = maybeDaytoString (cendDate form)
       a <- liftIO $ update_db_quotes unds startdate enddate "Yahoo"
-      let pricingForm = PricingForm {currentDate=cstartDate form,interestRate=cinterestRate form,iterations=citerations form}
+      let pricingForm = PricingForm {currentDate=cendDate form,interestRate=cinterestRate form,iterations=citerations form}
       res <- liftIO $ maybeValuate pricingForm dataProvider pfItem
       json res
     get   "/contractGraph/listOfContracts/" $ basicAuth $ do
