@@ -45,6 +45,7 @@ import Data.Maybe
 import Data.Time.Clock
 import Data.Time.Calendar
 import Data.Time.Format
+import System.Exit
 
 instance FromJSON CommonContractData
 instance FromJSON PricingForm
@@ -123,14 +124,22 @@ defaultService allContracts dataProvider = do
       contractGraphView
     post  "/contractGraph/contracts/" $ basicAuth $ do
       form <- (jsonParam "conf") :: ActionM ContractGraphForm
-      let startdate = maybeDaytoString (cstartDate form)
+
+
+      let pfiId = ccontract form
+      pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
+      let pItems2 = map (withHorizon . fromEntity) pItems
+      let pfItem_temp = filter (\(x,y,z) -> x==pfiId) pItems2
+      let pfItem = (\((x,y,z):xs) -> y) pfItem_temp
+
+
+
+      let startdate = daytoString (pFItemStartDate pfItem)
       let enddate = maybeDaytoString (cendDate form)
       a <- liftIO $ update_db_quotes "GOOGL" startdate enddate "Yahoo"
       let pricingForm = PricingForm {currentDate=cstartDate form,interestRate=cinterestRate form,iterations=citerations form}
-      pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
-      res <- liftIO $ mapM (maybeValuate pricingForm dataProvider) $ map P.entityVal pItems
-      json $ object [ "prices" .= res
-                    , "total"  .= (sum $ map (fromMaybe 0) res) ]
+      res <- liftIO $ maybeValuate pricingForm dataProvider pfItem
+      json res
     get   "/contractGraph/listOfContracts/" $ basicAuth $ do
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
       let pItems2 = map (withHorizon . fromEntity) pItems
@@ -253,5 +262,7 @@ authUser u p | u == "hiperfit" && p == "123" = Authorized
              | otherwise = Unauthorized
 
 
-maybeDaytoString (Just t) =  formatTime defaultTimeLocale "%F" t
+maybeDaytoString (Just t) = formatTime defaultTimeLocale "%F" t
 maybeDaytoString Nothing = error "No date given"
+
+daytoString t = formatTime defaultTimeLocale "%F" t
