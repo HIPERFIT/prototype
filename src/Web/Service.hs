@@ -125,7 +125,6 @@ defaultService allContracts dataProvider = do
     post  "/contractGraph/contracts/" $ basicAuth $ do
       form <- (jsonParam "conf") :: ActionM ContractGraphForm
 
-
       let pfiId = ccontract form
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
       let pItems2 = map (withHorizon . fromEntity) pItems
@@ -136,13 +135,12 @@ defaultService allContracts dataProvider = do
       let cMeta = extractMeta mContr
       let unds  = (\(x:xs) -> x) (underlyings cMeta)
 
-
-
       let startdate = daytoString (pFItemStartDate pfItem)
       let enddate = maybeDaytoString (cendDate form)
       a <- liftIO $ update_db_quotes unds startdate enddate "Yahoo"
-      let pricingForm = PricingForm {currentDate=cstartDate form,interestRate=cinterestRate form,iterations=citerations form}
-      res <- liftIO $ maybeValuate pricingForm dataProvider pfItem
+
+      let dates = getAllDays (cstartDate form) (cendDate form)
+      let res = map (maybeValuateList pfItem dataProvider form) dates
       json res
     get   "/contractGraph/listOfContracts/" $ basicAuth $ do
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
@@ -266,7 +264,27 @@ authUser u p | u == "hiperfit" && p == "123" = Authorized
              | otherwise = Unauthorized
 
 
+maybeDaytoString :: Maybe Day -> String
 maybeDaytoString (Just t) = formatTime defaultTimeLocale "%F" t
 maybeDaytoString Nothing = error "No date given"
 
+daytoString :: Day -> String
 daytoString t = formatTime defaultTimeLocale "%F" t
+
+maybeValuateList :: PFItem -> DataProvider -> ContractGraphForm -> Day -> (String, Maybe Double)
+maybeValuateList pfItem dataProvider form date = do
+  --let pricingForm = PricingForm {currentDate=Just date,interestRate=cinterestRate form,iterations=citerations form}
+  --res <- (maybeValuate pricingForm dataProvider pfItem)
+  --res
+  (daytoString date, Just 5)
+
+
+nextDay :: Day -> Day -> [Day]
+nextDay startDate endDate = if (daytoString startDate) == (daytoString endDate) then [startDate] else startDate : (nextDay (addDays 1 startDate) endDate)
+
+getAllDays :: Maybe Day -> Maybe Day -> [Day]
+getAllDays Nothing _ = error "Missing starting date"
+getAllDays _ Nothing = error "Missing end date"
+getAllDays (Just startDate) (Just endDate) = do
+  let a = if (daytoString startDate) >= (daytoString endDate) then error "Starting date needs to before end date" else 2
+  nextDay startDate endDate

@@ -146,8 +146,7 @@ function createChartContract()
     var color="#00FF00";
     var data = collectData($('.form-control'));
     $.post("/contractGraph/contracts/",{"conf": JSON.stringify(data)}/*{"cstartDate": startdate, "cendDate" : enddate, "cinterestRate": interest, "citerations": iterations}*/) .done(function(resp) {
-            alert(resp);
-            /*resp.reverse();
+            //resp.reverse();
             var labels=[];
             var data=[];
             var options = {datasetFill : false};
@@ -157,10 +156,10 @@ function createChartContract()
                 labels.push(resp[i][0]);
                 data.push(resp[i][1]);
             }
-            var full_data = {labels: labels, datasets: [{label: stock_id, data: data, strokeColor: color, pointColor: color}]};
+            var full_data = {labels: labels, datasets: [{label: contract, data: data, strokeColor: color, pointColor: color}]};
             var ctx = document.getElementById("contractChart").getContext("2d");
             var myLineChart = new Chart(ctx).Line(full_data, options);
-        */})
+        })
 }
 
 
