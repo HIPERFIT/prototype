@@ -140,7 +140,7 @@ defaultService allContracts dataProvider = do
       a <- liftIO $ update_db_quotes unds startdate enddate "Yahoo"
 
       let dates = getAllDays (cstartDate form) (cendDate form)
-      let res = map (maybeValuateList pfItem dataProvider form) dates
+      res <- liftIO $ mapM (maybeValuateGraph pfItem dataProvider form) dates
       json res
     get   "/contractGraph/listOfContracts/" $ basicAuth $ do
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
@@ -271,12 +271,11 @@ maybeDaytoString Nothing = error "No date given"
 daytoString :: Day -> String
 daytoString t = formatTime defaultTimeLocale "%F" t
 
-maybeValuateList :: PFItem -> DataProvider -> ContractGraphForm -> Day -> (String, Maybe Double)
-maybeValuateList pfItem dataProvider form date = do
-  --let pricingForm = PricingForm {currentDate=Just date,interestRate=cinterestRate form,iterations=citerations form}
-  --res <- (maybeValuate pricingForm dataProvider pfItem)
-  --res
-  (daytoString date, Just 5)
+maybeValuateGraph :: PFItem -> DataProvider -> ContractGraphForm -> Day -> IO (String, Maybe Double)
+maybeValuateGraph pfItem dataProvider form date = do
+  let pricingForm = PricingForm {currentDate=Just date,interestRate=cinterestRate form,iterations=citerations form}
+  res <- (maybeValuate pricingForm dataProvider pfItem)
+  return(daytoString date, res)
 
 
 nextDay :: Day -> Day -> [Day]
