@@ -28,6 +28,3 @@ run_web:dependencies
 	cabal build web
 	$(WEB)
 
-run_api:dependencies
-	cabal build API
-	$(API)

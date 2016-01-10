@@ -6,10 +6,6 @@ import Stocks.Yahoo as Yahoo
 import Stocks.Google as Google
 import Database.SQLite.Simple
 import Database.SQLite.Simple.FromRow
---import PersistentData
---import DB
---import qualified Database.Persist as P
---import Control.Monad.Trans
 
 
 fetch id start_date end_date "Yahoo" = Yahoo.get_close id start_date end_date
@@ -42,8 +38,8 @@ stocks_outdated id start_date end_date = do
     return(
         ((length rows)==0 && (length rows_enddate)==0) ||
         (length rows_startdate)==0)
-    --return(True)
 
+getStocks :: String -> String -> String -> String -> IO [(String, String)]
 getStocks id start_date end_date source = do
     b <- stocks_outdated id start_date end_date
     if b
@@ -54,9 +50,10 @@ transToDbQuotes conn id (date,value) = do
     execute conn "INSERT INTO db_quotes (underlying,date,value,user_id) VALUES(?,?,?,1)"  ([id :: String, date :: String, value :: String])
 
 
+update_db_quotes :: String -> String -> String -> String -> IO [(String, String)]
 update_db_quotes id start_date end_date source = do
     conn <- open "proto.sqlite3"
     execute conn "DELETE from db_quotes where underlying=?" (Only(id :: String))
     stocks <- getStocks id start_date end_date source
     mapM_ (transToDbQuotes conn id) stocks
-    return([])
+    return(stocks)

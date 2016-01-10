@@ -75,15 +75,3 @@ executable             web
   hs-source-dirs:      src/Web
   default-language:    Haskell2010
   Ghc-Options:         -main-is Main
-
-executable             API
-  main-is:             Test.hs
-  hs-source-dirs:      src/API
-  default-language:    Haskell2010
-  Ghc-Options:         -main-is Main
-  build-depends:       base >=4.6
-                     , HTTP
-                     , bytestring >= 0.10.4.0
-                     , split
-                     , sqlite-simple
-                     , text
