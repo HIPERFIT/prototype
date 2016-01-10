@@ -145,7 +145,7 @@ defaultService allContracts dataProvider = do
     get   "/contractGraph/listOfContracts/" $ basicAuth $ do
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
       let pItems2 = map (withHorizon . fromEntity) pItems
-      json (map (\(x,y,z) -> x) pItems2)
+      json (map prettifyContract pItems2)
     middleware $ staticPolicy (addBase "src/Web/static")
 
 api contractType inputData mkContr = 
@@ -287,3 +287,8 @@ getAllDays _ Nothing = error "Missing end date"
 getAllDays (Just startDate) (Just endDate) = do
   let a = if (daytoString startDate) >= (daytoString endDate) then error "Starting date needs to before end date" else 2
   nextDay startDate endDate
+
+
+prettifyContract (id,pfItem,endDate) = do
+  let sDate = pFItemStartDate pfItem
+  (id, (daytoString sDate) ++ " - " ++ (daytoString endDate))

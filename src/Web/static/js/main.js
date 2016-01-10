@@ -23,6 +23,13 @@ function populateSelect ($sel, opts) {
     $sel.selectpicker("refresh");
 }
 
+function populateSelect_contract ($sel, opts) {
+    $.each(opts, function (i, v) {
+        $sel.append($("<option/>").val(v[0]).text(v[1]));
+    });
+    $sel.selectpicker("refresh");
+}
+
 function resetStyles () {
     $('.price-output').removeClass('label-warning').addClass('label-info');
     $('.total-output').removeClass('label-warning').addClass('label-success');
@@ -138,15 +145,10 @@ function createChartStock() {
 
 function createChartContract()
 {
-    var startdate=$('[name="cstartDate"]').val();
-    var enddate=$('[name="cendDate"]').val();
     var contract=$('[name="ccontract"]').val();
-    var interest=$('[name="cinterestRate"]').val();
-    var iterations=$('[name="citerations"]').val();
     var color="#00FF00";
     var data = collectData($('.form-control'));
-    $.post("/contractGraph/contracts/",{"conf": JSON.stringify(data)}/*{"cstartDate": startdate, "cendDate" : enddate, "cinterestRate": interest, "citerations": iterations}*/) .done(function(resp) {
-            //resp.reverse();
+    $.post("/contractGraph/contracts/",{"conf": JSON.stringify(data)}) .done(function(resp) {
             var labels=[];
             var data=[];
             var options = {datasetFill : false};
@@ -205,7 +207,7 @@ $(document).ready(function() {
     });
     $("select[name='sUnderlying2']").append($("<option/>").val("").text("None"));
     $.get('/marketData/underlyings/', function (data) {populateSelect($("select[data-datatype='Underlying']"), data)});
-    $.get('/contractGraph/listOfContracts/', function (data) {$("select[name='ccontract']").empty(); populateSelect($("select[name='ccontract']"), data)});
+    $.get('/contractGraph/listOfContracts/', function (data) {$("select[name='ccontract']").empty(); populateSelect_contract($("select[name='ccontract']"), data)});
     $('.del-pfitem').click(function() {
         $.ajax({
             type: 'DELETE',
