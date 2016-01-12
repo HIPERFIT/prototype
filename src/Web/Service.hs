@@ -118,7 +118,7 @@ defaultService allContracts dataProvider = do
       stock_id <- param "id"
       startdate <- param "startdate"
       enddate <- param "enddate"
-      stockData <- liftIO $ getStocks stock_id startdate enddate "Yahoo"
+      stockData <- liftIO $ update_db_quotes stock_id startdate enddate "Yahoo"
       json stockData
     get   "/contractGraph/" $ basicAuth $ do
       contractGraphView
@@ -137,7 +137,7 @@ defaultService allContracts dataProvider = do
 
       let startdate = daytoString (pFItemStartDate pfItem)
       let enddate = maybeDaytoString (cendDate form)
-      a <- liftIO $ update_db_quotes unds startdate enddate "Yahoo"
+      a <- liftIO $ update_db_quotes unds (if startdate < (maybeDaytoString (cstartDate form)) then startdate else maybeDaytoString (cstartDate form)) enddate "Yahoo"
 
       let dates = getAllDays (cstartDate form) (cendDate form)
       res <- liftIO $ mapM (maybeValuateGraph pfItem dataProvider form) dates

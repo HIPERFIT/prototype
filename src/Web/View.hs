@@ -191,7 +191,7 @@ contractgraphsPage = buildTable (buildThead headerRow, buildTbody $ [(fields ++ 
     where
       fields = map field $ gtoForm (Proxy :: Proxy (Rep ContractGraphForm))
       addBtn = a ! class_ "btn btn-lg btn-primary" ! id "contractgraph-btn" ! href "#contractgraph" $ "Show"
-      headerRow = ["Underlying", "Starting date", "End date", "InterestRate", "Interations", ""]
+      headerRow = ["Contract", "Starting date", "End date", "InterestRate", "Interations", ""]
 
 
 
