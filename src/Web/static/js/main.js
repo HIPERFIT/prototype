@@ -162,6 +162,11 @@ function createChartContract()
             var ctx = document.getElementById("contractChart").getContext("2d");
             var myLineChart = new Chart(ctx).Line(full_data, options);
         })
+    .fail(function(jqXHR, textStatus, errorThrown)
+    {
+        $('#error').html(jqXHR.responseText);
+        $('#error').show();
+    })
 }
 
 
