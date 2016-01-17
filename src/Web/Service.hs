@@ -140,8 +140,8 @@ defaultService allContracts dataProvider = do
       a <- liftIO $ mapM (\x -> update_db_quotes x (if startdate < (maybeDaytoString (cstartDate form)) then startdate else maybeDaytoString (cstartDate form)) enddate "Yahoo") unds
 
       let dates = getAllDays (cstartDate form) (cendDate form)
-      --res <- liftIO $ mapM (maybeValuateGraph pfItem dataProvider form) dates
-      --json res
+      res <- liftIO $ mapM (maybeValuateGraph pfItem dataProvider form) dates
+      json res
       text "hello"
     get   "/contractGraph/listOfContracts/" $ basicAuth $ do
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
