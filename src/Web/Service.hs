@@ -133,15 +133,16 @@ defaultService allContracts dataProvider = do
       let sDate = pFItemStartDate pfItem
       let mContr = (day2ContrDate sDate, read $ T.unpack $ pFItemContractSpec pfItem)
       let cMeta = extractMeta mContr
-      let unds  = (\(x:xs) -> x) (underlyings cMeta)
+      let unds  = underlyings cMeta
 
       let startdate = daytoString (pFItemStartDate pfItem)
       let enddate = maybeDaytoString (cendDate form)
-      a <- liftIO $ update_db_quotes unds (if startdate < (maybeDaytoString (cstartDate form)) then startdate else maybeDaytoString (cstartDate form)) enddate "Yahoo"
+      a <- liftIO $ mapM (\x -> update_db_quotes x (if startdate < (maybeDaytoString (cstartDate form)) then startdate else maybeDaytoString (cstartDate form)) enddate "Yahoo") unds
 
       let dates = getAllDays (cstartDate form) (cendDate form)
-      res <- liftIO $ mapM (maybeValuateGraph pfItem dataProvider form) dates
-      json res
+      --res <- liftIO $ mapM (maybeValuateGraph pfItem dataProvider form) dates
+      --json res
+      text "hello"
     get   "/contractGraph/listOfContracts/" $ basicAuth $ do
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
       let pItems2 = map (withHorizon . fromEntity) pItems
