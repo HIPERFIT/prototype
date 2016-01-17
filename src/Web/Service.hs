@@ -142,7 +142,6 @@ defaultService allContracts dataProvider = do
       let dates = getAllDays (cstartDate form) (cendDate form)
       res <- liftIO $ mapM (maybeValuateGraph pfItem dataProvider form) dates
       json res
-      text "hello"
     get   "/contractGraph/listOfContracts/" $ basicAuth $ do
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
       let pItems2 = map (withHorizon . fromEntity) pItems
