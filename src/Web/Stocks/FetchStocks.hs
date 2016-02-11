@@ -27,6 +27,7 @@ insertToDb conn id (date, value) = do
 fromDb id start_date end_date = do
     conn <- open "proto.sqlite3"
     rows <- query conn "SELECT date,value from stocks where stock_id=? and date>=? and date<=?" ([id :: String, start_date :: String, end_date :: String]) :: IO [(String,String)]
+    close conn
     return(rows)
 
 stocks_outdated id start_date end_date = do
@@ -35,6 +36,7 @@ stocks_outdated id start_date end_date = do
     rows_startdate <- query conn "select value from stocks where date<=? and stock_id=? limit 1" ([start_date :: String, id :: String]) :: IO [Only(String)]
     rows_enddate <- query conn "select value from stocks where date>=? and stock_id=? limit 1" ([start_date :: String, id :: String]) :: IO [Only(String)]
     rows <- query conn "select value from stocks where strftime('%s','now') - strftime('%s',created) < 7200 and stock_id=? limit 1" (Only (id :: String)) :: IO [Only(String)]
+    close conn
     return(
         ((length rows)==0 && (length rows_enddate)==0) ||
         (length rows_startdate)==0)
@@ -56,4 +58,5 @@ update_db_quotes id start_date end_date source = do
     execute conn "DELETE from db_quotes where underlying=?" (Only(id :: String))
     stocks <- getStocks id start_date end_date source
     mapM_ (transToDbQuotes conn id) stocks
+    close conn
     return(stocks)
