@@ -20,6 +20,7 @@ import Serialization
 import Utils
 import CodeGen.Utils
 import Auth
+import Stocks.FetchStocks
 
 import Web.Scotty hiding (body, params)
 import Web.Scotty.Internal.Types hiding (Env)
@@ -43,12 +44,15 @@ import Data.Text (Text)
 import Data.Maybe
 import Data.Time.Clock
 import Data.Time.Calendar
+import Data.Time.Format
+import System.Exit
 
 instance FromJSON CommonContractData
 instance FromJSON PricingForm
 instance FromJSON DataForm
 instance FromJSON CorrForm
 instance FromJSON PercentField
+instance FromJSON ContractGraphForm
 instance ToJSON PercentField
 
 defaultService allContracts dataProvider = do
@@ -110,6 +114,38 @@ defaultService allContracts dataProvider = do
       key <- jsonData :: ActionM (Text, Day)
       liftIO $ runDb $ P.deleteBy $ (uncurry MDEntry) key
       text "OK"
+    get   "/marketData/stocks/:id" $ basicAuth $ do
+      stock_id <- param "id"
+      startdate <- param "startdate"
+      enddate <- param "enddate"
+      stockData <- liftIO $ update_db_quotes stock_id startdate enddate "Yahoo"
+      json stockData
+    get   "/contractGraph/" $ basicAuth $ do
+      contractGraphView
+    post  "/contractGraph/contracts/" $ basicAuth $ do
+      form <- (jsonParam "conf") :: ActionM ContractGraphForm
+
+      let pfiId = ccontract form
+      pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
+      let pItems2 = map (withHorizon . fromEntity) pItems
+      let pfItem_temp = filter (\(x,y,z) -> x==pfiId) pItems2
+      let pfItem = (\((x,y,z):xs) -> y) pfItem_temp
+      let sDate = pFItemStartDate pfItem
+      let mContr = (day2ContrDate sDate, read $ T.unpack $ pFItemContractSpec pfItem)
+      let cMeta = extractMeta mContr
+      let unds  = underlyings cMeta
+
+      let startdate = daytoString (pFItemStartDate pfItem)
+      let enddate = maybeDaytoString (cendDate form)
+      a <- liftIO $ mapM (\x -> update_db_quotes x (if startdate < (maybeDaytoString (cstartDate form)) then startdate else maybeDaytoString (cstartDate form)) enddate "Yahoo") unds
+
+      let dates = getAllDays (cstartDate form) (cendDate form)
+      res <- liftIO $ mapM (maybeValuateGraph pfItem dataProvider form) dates
+      json res
+    get   "/contractGraph/listOfContracts/" $ basicAuth $ do
+      pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
+      let pItems2 = map (withHorizon . fromEntity) pItems
+      json (map prettifyContract pItems2)
     middleware $ staticPolicy (addBase "src/Web/static")
 
 api contractType inputData mkContr = 
@@ -198,7 +234,7 @@ valuate pricingForm dataProvider portfItem = do
     mContr = (day2ContrDate sDate, read $ T.unpack $ pFItemContractSpec portfItem)
     cMeta = extractMeta mContr
     allDays = map contrDate2Day (allDates cMeta)
-    unds  = underlyings cMeta      
+    unds  = underlyings cMeta
     getRawQuotes = provideQuotes dataProvider
 
 fromEntity p = (show $ fromSqlKey $ P.entityKey p, P.entityVal p)
@@ -226,3 +262,33 @@ readInstrument name = do
 
 authUser u p | u == "hiperfit" && p == "123" = Authorized
              | otherwise = Unauthorized
+
+
+maybeDaytoString :: Maybe Day -> String
+maybeDaytoString (Just t) = formatTime defaultTimeLocale "%F" t
+maybeDaytoString Nothing = error "No date given"
+
+daytoString :: Day -> String
+daytoString t = formatTime defaultTimeLocale "%F" t
+
+maybeValuateGraph :: PFItem -> DataProvider -> ContractGraphForm -> Day -> IO (String, Maybe Double)
+maybeValuateGraph pfItem dataProvider form date = do
+  let pricingForm = PricingForm {currentDate=Just date,interestRate=cinterestRate form,iterations=citerations form}
+  res <- (maybeValuate pricingForm dataProvider pfItem)
+  return(daytoString date, res)
+
+
+nextDay :: Day -> Day -> [Day]
+nextDay startDate endDate = if (daytoString startDate) == (daytoString endDate) then [startDate] else startDate : (nextDay (addDays 1 startDate) endDate)
+
+getAllDays :: Maybe Day -> Maybe Day -> [Day]
+getAllDays Nothing _ = error "Missing starting date"
+getAllDays _ Nothing = error "Missing end date"
+getAllDays (Just startDate) (Just endDate) = do
+  let a = if (daytoString startDate) >= (daytoString endDate) then error "Starting date needs to before end date" else 2
+  nextDay startDate endDate
+
+
+prettifyContract (id,pfItem,endDate) = do
+  let sDate = pFItemStartDate pfItem
+  (id, (daytoString sDate) ++ " - " ++ (daytoString endDate))

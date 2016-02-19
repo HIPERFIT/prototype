@@ -22,3 +22,9 @@ layoutCss = render $ do
               element ".form-buttons" |> a ? margin (px 5) (px 5) (px 5) (px 5)
               element ".pfitem-row" ? cursor pointer
               td |> element "div.date" ? maxWidth (px 200)
+              element "#stockChart" ? do
+                width (auto)
+                height (px 500)
+              element "#contractChart" ? do
+                width (auto)
+                height (px 500)

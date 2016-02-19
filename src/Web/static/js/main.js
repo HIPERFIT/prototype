@@ -23,6 +23,13 @@ function populateSelect ($sel, opts) {
     $sel.selectpicker("refresh");
 }
 
+function populateSelect_contract ($sel, opts) {
+    $.each(opts, function (i, v) {
+        $sel.append($("<option/>").val(v[0]).text(v[1]));
+    });
+    $sel.selectpicker("refresh");
+}
+
 function resetStyles () {
     $('.price-output').removeClass('label-warning').addClass('label-info');
     $('.total-output').removeClass('label-warning').addClass('label-success');
@@ -80,6 +87,89 @@ function hideAlerts() {
     $('#pricing-form-alert, #error, #result').empty().hide();
 }
 
+
+function createChartStock() {
+    var startdate=$('[name="sstartDate"]').val();
+    var enddate=$('[name="sendDate"]').val();
+    var stock_id1=$('[name="sUnderlying1"]').val();
+    var stock_id2=$('[name="sUnderlying2"]').val();
+    var normalize=$('[name="normalize"]').is(":checked");
+    var color1="#FF00FF";
+    var color2="#00FF00";
+    $.get("/marketData/stocks/"+stock_id1,{"startdate": startdate, "enddate" : enddate})
+        .done(function(resp) {
+            resp.reverse();
+            var labels=[];
+            var data=[];
+            var options = {datasetFill : false};
+            scale=Math.ceil(resp.length/100);
+            for(var i=0; i<resp.length; i+=scale)
+            {
+                labels.push(resp[i][0]);
+                data.push(resp[i][1]);
+            }
+            if(stock_id2!="")
+            {
+                $.get("/marketData/stocks/"+stock_id2,{"startdate": startdate, "enddate" : enddate})
+                    .done(function(resp2) {
+                        resp2.reverse();
+                        multiplier=1;
+                        if(normalize)
+                        {
+                            multiplier = parseFloat(resp[0][1]) / parseFloat(resp2[0][1]);
+                        }
+                        var data2=[];
+                        for(var i=0; i<resp2.length; i+=scale)
+                        {
+                            data2.push(parseFloat(resp2[i][1])*multiplier);
+                        }
+                        var full_data = {labels: labels, datasets: [{label: stock_id1, data: data, strokeColor: color1, pointColor: color1},{label: stock_id2, data: data2, strokeColor: color2, pointColor: color2}]};
+                            var ctx = document.getElementById("stockChart").getContext("2d");
+                            var myLineChart = new Chart(ctx).Line(full_data, options);
+                    })
+            }
+            else
+            {
+                var full_data = {labels: labels, datasets: [{label: stock_id1, data: data, strokeColor: color1, pointColor: color1}]};
+                var ctx = document.getElementById("stockChart").getContext("2d");
+                var myLineChart = new Chart(ctx).Line(full_data, options);
+            }
+        })
+    var legend="<div class=\"stocklegendcolor\" style=\"background-color:"+color1+";float:left;margin-right:5px;height:20px;width:20px\"></div> "+stock_id1+"<br>";
+    if(stock_id2!="")
+        legend+="<div class=\"stocklegendcolor\" style=\"background-color:"+color2+";float:left;margin-right:5px;height:20px;width:20px\"></div> "+stock_id2+"<br><br>";
+    $('#stocklegend').html(legend);
+
+}
+
+
+function createChartContract()
+{
+    var contract=$('[name="ccontract"]').val();
+    var color="#00FF00";
+    var data = collectData($('.form-control'));
+    $.post("/contractGraph/contracts/",{"conf": JSON.stringify(data)}) .done(function(resp) {
+            var labels=[];
+            var data=[];
+            var options = {datasetFill : false};
+            scale=Math.ceil(resp.length/100);
+            for(var i=0; i<resp.length; i+=scale)
+            {
+                labels.push(resp[i][0]);
+                data.push(resp[i][1]);
+            }
+            var full_data = {labels: labels, datasets: [{label: contract, data: data, strokeColor: color, pointColor: color}]};
+            var ctx = document.getElementById("contractChart").getContext("2d");
+            var myLineChart = new Chart(ctx).Line(full_data, options);
+        })
+    .fail(function(jqXHR, textStatus, errorThrown)
+    {
+        $('#error').html(jqXHR.responseText);
+        $('#error').show();
+    })
+}
+
+
 $(document).ready(function() {
     $('.selectpicker').selectpicker();
     $('.date').datepicker({autoclose: true,
@@ -120,7 +210,9 @@ $(document).ready(function() {
             })
             .always(function() {processing(false)});
     });
+    $("select[name='sUnderlying2']").append($("<option/>").val("").text("None"));
     $.get('/marketData/underlyings/', function (data) {populateSelect($("select[data-datatype='Underlying']"), data)});
+    $.get('/contractGraph/listOfContracts/', function (data) {$("select[name='ccontract']").empty(); populateSelect_contract($("select[name='ccontract']"), data)});
     $('.del-pfitem').click(function() {
         $.ajax({
             type: 'DELETE',
@@ -165,4 +257,14 @@ $(document).ready(function() {
     })
     $('input[name="currentDate"], input[name="interestRate"], input[name="iterations"]').keydown(function() {invalidateResult($('.price-output, .total-output'))});
     $('input[name="currentDate"]').change(function() {invalidateResult($('.price-output, .total-output'))});
+
+    $('#stockgraph-btn').click(function() {
+        createChartStock();
+        return false;
+    });
+
+    $('#contractgraph-btn').click(function() {
+        createChartContract();
+        return false;
+    });
 })

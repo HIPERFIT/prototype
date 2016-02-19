@@ -26,7 +26,7 @@ import Text.Blaze.Html5 (Html, a, body, button,
                          option, button, span, i, select, 
                          table, tr, td, th, stringValue, tbody, 
                          thead, fieldset, legend, AttributeValue,
-                         pre)
+                         pre, canvas)
 import Text.Blaze.Html5.Attributes (charset, class_, content, href,
                                     httpEquiv, id, media, name,
                                     placeholder, rel, src, type_, 
@@ -44,11 +44,12 @@ import Control.Monad (forM_)
 import qualified Data.Map as M
 
 
-menuItems = [instrumentsMenuItem, myPortfolioMenuItem, marketDataMenuItem, modelDataMenuItem]
+menuItems = [instrumentsMenuItem, myPortfolioMenuItem, marketDataMenuItem, modelDataMenuItem, contractGraphMenuItem]
 instrumentsMenuItem = ("Instruments", "/")
 myPortfolioMenuItem = ("My Portfolio", "/portfolio/")
 marketDataMenuItem = ("Market Data", "/marketData/view/")
 modelDataMenuItem = ("Model Data", "/modelData/")
+contractGraphMenuItem = ("Contract Graph", "/contractGraph/")
 contractsBaseUrl = "/contracts/"
 
 instance FromJSON Day where
@@ -76,6 +77,7 @@ layout t activeMenuItem pageContent = docTypeHtml $ do
                         script ! src "//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" $ mempty
                         script ! src "//cdnjs.cloudflare.com/ajax/libs/spin.js/2.0.1/jquery.spin.min.js" $ mempty
                         script ! src "//cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.3.1/js/bootstrap-datepicker.min.js" $ mempty
+                        script ! src "/js/chart.js" $ mempty
                         script ! src "/js/main.js" $ mempty
                         script ! src "//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js" $ mempty
                         script ! src "//cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.6.3/js/bootstrap-select.min.js" $ mempty
@@ -147,12 +149,18 @@ marketDataView quotes corrs = blaze $ layout "Market Data" (Just (snd marketData
                    ul ! class_ "nav nav-tabs" $ do
                      li ! class_ "active" $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#quotes" $ "Quotes"
                      li  $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#corrs" $ "Correlations"
+                     li  $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#stockgraphs" $ "Stock Graphs"
                    div ! class_ "tab-content" $ do
-                     div! id "quotes" ! class_ "tab-pane fade in active" $ 
+                     div! id "quotes" ! class_ "tab-pane fade in active" $
                         quotesTable quotes
-                     div ! id "corrs" ! class_ "tab-pane fade" $ 
+                     div ! id "corrs" ! class_ "tab-pane fade" $
                        corrsTable corrs
-      
+                     div ! id "stockgraphs" ! class_ "tab-pane fade" $ do
+                       stockgraphsPage
+                       div ! id "stocklegend" $ ""
+                       canvas ! id "stockChart" $ ""
+
+
 
 quotesTable quotes = buildTable (buildThead headerRow, buildTbody $ (fields ++ [addBtn]) : map toRow quotes)
     where
@@ -169,6 +177,23 @@ corrsTable corrs = buildTable (buildThead headerRow, buildTbody $ (fields ++ [ad
                                    , dataDelLink (encode (und1, und2, formatDate d)) "/marketData/corrs/"]
       fields = map field $ gtoForm (Proxy :: Proxy (Rep CorrForm))
       addBtn = a ! class_ "btn btn-lg btn-primary" ! id "add-data-corrs" ! href "/marketData/corrs/" $ "Add"
+
+
+
+stockgraphsPage = buildTable (buildThead headerRow, buildTbody $ [(fields ++ [addBtn])])
+    where
+      fields = map field $ gtoForm (Proxy :: Proxy (Rep StockGraphForm))
+      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "stockgraph-btn" ! href "#stockgraph" $ "Show"
+      headerRow = ["Underlying 1", "Underlying 2", "Starting date", "End date", "Normalize?", ""]
+
+
+contractgraphsPage = buildTable (buildThead headerRow, buildTbody $ [(fields ++ [addBtn])])
+    where
+      fields = map field $ gtoForm (Proxy :: Proxy (Rep ContractGraphForm))
+      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "contractgraph-btn" ! href "#contractgraph" $ "Show"
+      headerRow = ["Contract", "Starting date", "End date", "InterestRate", "Interations", ""]
+
+
 
 portfolioView portfolio defaults = blaze $ layout "My Portfolio" (Just (snd myPortfolioMenuItem)) $ do
                             div ! class_ "row" $ do
@@ -210,7 +235,15 @@ modelDataView md = do
      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "add-data" ! href "/modelData/" $ "Add"
      delLink und d = a ! dataAttribute "und" (stringValue und) ! dataAttribute "date" (stringValue (formatDate d))
                        ! href "/modelData/" ! class_ "del-item" $ i ! class_ "glyphicon glyphicon-trash" $ ""
-          
+
+
+contractGraphView = blaze $ layout "Contract Graph" (Just (snd contractGraphMenuItem)) $ do
+    contractgraphsPage
+    canvas ! id "contractChart" $ ""
+
+
+
+
 buildTable (tblHead, tblBody) = table ! class_ "table table-striped" $ do
                                   tblHead
                                   tblBody

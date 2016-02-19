@@ -33,8 +33,9 @@ DbQuotes
    underlying  Text
    date        Day
    value       Double
-   userId      UserId
+   userId      UserId nullable
    QuoteEntry  underlying date
+   --provider    Text nullable
    deriving Show Generic
 
 DbModelData
