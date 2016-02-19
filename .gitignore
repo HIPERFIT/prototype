@@ -4,3 +4,5 @@
 *.sqlite3
 *.pid
 dist/*
+.cabal-sandbox/*
+cabal.sandbox.config
