@@ -21,6 +21,17 @@ or using main function in Tests.hs.
 
 Use `make run_web` to run web interface. Open `localhost:3000` in browser.
 
+Use `make init_data` to initialize database with quotes for last 90 days for Apple and Google stocks from Yahoo finance API.
+
+Alternatively, it's possible to run application using `cabal run web` or directly from `./dist/build/web/web` directory.
+
+The following command-line options are accepted:
+
+```
+  -i       --initdata   Fetch quotes for AAPL and GOGL from public sources
+  -p PORT  --port=PORT  Run server on specified port (3000 by default)
+```
+
 Emacs Haskell-mode users
 ------------------
 

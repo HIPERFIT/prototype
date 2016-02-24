@@ -8,8 +8,6 @@ import DB as DB
 import Data.Text (Text, unpack, pack)
 import Data.List
 import Database.Persist.Sqlite
-import Database.SQLite.Simple
-import Database.SQLite.Simple.FromRow
 import Utils
 
 fetch :: String -> String -> String -> String -> IO [(String, String)]

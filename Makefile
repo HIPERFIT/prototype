@@ -31,3 +31,7 @@ run_web:dependencies
 run_apitests:dependencies
 	cabal build api_tests
 	$(API)
+
+init_data:
+	cabal build web
+	$(WEB) -i
