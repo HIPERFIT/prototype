@@ -25,14 +25,18 @@ make run_test
 
 As an alternative, use the main function in `Tests.hs`.
 
+
+Running the Web Interface
+-------------------------
+
 Use `make run_web` to run the web interface. Open `localhost:3000` in your browser (login: hiperfit, password: 123).
 
 Use `make init_data` to initialize the database with quotes for the
 last 90 days for Apple and Google stocks from the Yahoo finance API.
 
-Alternatively, it is possible to run the application using `cabal run web` or directly from `./dist/build/web/web` directory.
+Alternatively, it is possible to run the application using `cabal run web` or directly by running the executable `./dist/build/web/web`.
 
-The following command-line options are accepted:
+The executable `./dist/build/web/web` accepts the following command-line options:
 
 ```
   -i       --initdata   Fetch quotes for AAPL and GOGL from public sources
