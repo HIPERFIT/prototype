@@ -86,6 +86,7 @@ genCLExpr :: Expr a -> GenEnv -> Int -> CLCode
 genCLExpr (Arith Max e1 e2) env t = FunCall "fmax" [genCLExpr e1 env t, genCLExpr e2 env t]
 genCLExpr (Arith Min e1 e2) env t = FunCall "fmin" [genCLExpr e1 env t, genCLExpr e2 env t]
 genCLExpr (Arith Minus e1 e2) env t = BinOp "-" (genCLExpr e1 env t) (genCLExpr e2 env t)
+genCLExpr (Arith Plus e1 e2) env t = BinOp "+" (genCLExpr e1 env t) (genCLExpr e2 env t)
 genCLExpr (Arith Times e1 e2) env t = BinOp "*" (genCLExpr e1 env t) (genCLExpr e2 env t)
 genCLExpr (Arith Div e1 e2) env t = BinOp "/" (genCLExpr e1 env t) (genCLExpr e2 env t)
 genCLExpr (Less e1 e2) env t = BoolExpr2 "<" (genCLExpr e1 env t) (genCLExpr e2 env t)
