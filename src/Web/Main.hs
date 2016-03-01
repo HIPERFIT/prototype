@@ -14,6 +14,7 @@ import Serialization
 import Data
 import Utils
 import qualified Stocks.FetchStocks as F
+import System.Environment
 
 import Data.Time
 import Web.Scotty hiding (body, params, options)
@@ -56,9 +57,12 @@ main = do
   initializeDataTables
   args <- getArgs
   params <- appOpts args
+  port <- System.Environment.lookupEnv "PORT"
   case params of
     (opts@(o : _), _) -> mapM_ performAction opts
-    ([],_) -> runServer defaultPort
+    ([],_) -> runServer (case port of
+                            Just p -> (read p :: Int)
+                            Nothing -> defaultPort)
 
 performAction InitData = initData
 performAction (Port portNum) = runServer $ read portNum
