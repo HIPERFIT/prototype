@@ -32,14 +32,14 @@ instance FromJSON BO.Basket2Option
 
 allContracts = [VO.vanillaOption, RO.rainbowOption, BO.basket2Option]
 defaultPort = 3000
-initialSymbols = ["AAPL", "GOGL"]
+initialSymbols = ["AAPL", "GOOGL", "CAT", "YHOO", "SHLD", "IBM", "MSFT"]
 
 data Flag = Port String | InitData
       deriving Show
    
 options :: [OptDescr Flag]
 options =
-    [ Option ['i'] ["initdata"] (NoArg InitData)     "Fetch quotes for AAPL and GOGL from public sources"
+    [ Option ['i'] ["initdata"] (NoArg InitData)     "Fetch quotes for a number of stocks (e.g., AAPL and GOOGL) from Yahoo"
     , Option ['p'] ["port"]     (ReqArg Port "PORT") "Run server on specified port (3000 by default)"
     ]
 
