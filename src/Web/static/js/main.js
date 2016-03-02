@@ -101,7 +101,7 @@ function createChartStock() {
             resp.reverse();
             var labels=[];
             var data=[];
-            var options = {datasetFill : false};
+            var options = {datasetFill : false, bezierCurve : false};
             scale=Math.ceil(resp.length/100);
             for(var i=0; i<resp.length; i+=scale)
             {
@@ -151,7 +151,7 @@ function createChartContract()
     $.post("/contractGraph/contracts/",{"conf": JSON.stringify(data)}) .done(function(resp) {
             var labels=[];
             var data=[];
-            var options = {datasetFill : false};
+            var options = {datasetFill : false, bezierCurve : false};
             scale=Math.ceil(resp.length/100);
             for(var i=0; i<resp.length; i+=scale)
             {
