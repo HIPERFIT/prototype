@@ -1,39 +1,53 @@
-Prototype is haskell library for integration contract language and parallel pricing engine.
+The HIPERFIT Prototype is a web-based system that integrates the
+HIPERFIT contract language and the HIPERFIT parallel pricing engine.
 
 Requirements
 ------------
 GHC >= 7.8.3
-In addition to libraries listed in .cabal file some system packages are required for hmatrix lib. Here is information on hmatrix requirements: https://github.com/albertoruiz/hmatrix/blob/master/INSTALL.md
 
-Running
--------
+In addition to libraries listed in the .cabal file, some system
+packages are required for the `hmatrix` library. For information on
+`hmatrix` requirements, see
+https://github.com/albertoruiz/hmatrix/blob/master/INSTALL.md
 
-Build pricing engine before running tests:
+How to Run the Prototype
+------------------------
+
+Build the pricing engine before running the tests:
 ```
 make compile_opencl
 ```
 
-After that tests can be run using make:
+After building, test that it runs using make:
 ```
 make run_test
 ```
-or using main function in Tests.hs.
 
-Use `make run_web` to run web interface. Open `localhost:3000` in browser.
+As an alternative, use the main function in `Tests.hs`.
 
-Use `make init_data` to initialize database with quotes for last 90 days for Apple and Google stocks from Yahoo finance API.
 
-Alternatively, it's possible to run application using `cabal run web` or directly from `./dist/build/web/web` directory.
+Running the Web Interface
+-------------------------
 
-The following command-line options are accepted:
+Use `make run_web` to run the web interface. Open `localhost:3000` in your
+browser (login: hiperfit, password: 123). You may use an environment variable
+to specify an alternative port, as in `PORT=8001 make run_web`. 
+
+Use `make init_data` to initialize the database with quotes, obtained from the Yahoo finance API, for the
+last 90 days for a number of stocks, including Apple (AAPL) and Google (GOOGL).
+
+Alternatively, it is possible to run the application using `cabal run web` or directly by running the executable `./dist/build/web/web`.
+
+The executable `./dist/build/web/web` accepts the following command-line options:
 
 ```
-  -i       --initdata   Fetch quotes for AAPL and GOGL from public sources
+  -i       --initdata   Fetch quotes for a number of stocks (e.g., AAPL and GOOGL) from public sources
   -p PORT  --port=PORT  Run server on specified port (3000 by default)
 ```
 
 Emacs Haskell-mode users
-------------------
+------------------------
 
-Use `haskell-session-change-target` command to set proper target: `tests` when running tests/Tests.hs and `web` for web interface.
+Use `haskell-session-change-target` command to set properly the target
+`tests`, when running tests/Tests.hs, and `web` for the web interface.
     
