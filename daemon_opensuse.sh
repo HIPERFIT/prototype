@@ -8,7 +8,7 @@ case $1 in
     start)
         echo "Starting $SERVICE_NAME ..."
         if [ ! -f $PID_PATH_NAME ]; then
-            nohup $DAEMON $PORT 2>> /dev/null >> /dev/null & echo $! > $PID_PATH_NAME
+            nohup $DAEMON -p $PORT 2>> /dev/null >> /dev/null & echo $! > $PID_PATH_NAME
             echo "$SERVICE_NAME started ..."
         else
             echo "$SERVICE_NAME is already running ..."
@@ -33,7 +33,7 @@ case $1 in
             echo "$SERVICE_NAME stopped ...";
             rm $PID_PATH_NAME
             echo "$SERVICE_NAME starting ..."
-            nohup $DAEMON $PORT 2>> /dev/null >> /dev/null & echo $! > $PID_PATH_NAME
+            nohup $DAEMON -p $PORT 2>> /dev/null >> /dev/null & echo $! > $PID_PATH_NAME
             echo "$SERVICE_NAME started ..."
         else
             echo "$SERVICE_NAME is not running ..."
