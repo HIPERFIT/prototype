@@ -30,3 +30,6 @@ layoutCss = render $ do
               element "#contractChart" ? do
                 width (auto)
                 height (px 500)
+              element ".cf-item-spacing" ? do
+                paddingRight (px 5)
+                paddingLeft (px 5)

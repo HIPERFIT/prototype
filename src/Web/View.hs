@@ -3,12 +3,16 @@
 
 module View where
 
+import Contract.Type
+import Contract (cashflows, Cashflow)
+
 import DataProviders.Data
 import Utils
 import Data
 import TypeClass
 import CodeGen.DataGen (ppDouble)
 import PersistentData
+import Serialization
 import qualified DB
 import qualified Fields as F
 
@@ -26,7 +30,7 @@ import Text.Blaze.Html5 (Html, a, body, button,
                          option, button, span, i, select, 
                          table, tr, td, th, stringValue, tbody, 
                          thead, fieldset, legend, AttributeValue,
-                         pre, canvas)
+                         pre, canvas, strong)
 import Text.Blaze.Html5.Attributes (charset, class_, content, href,
                                     httpEquiv, id, media, name,
                                     placeholder, rel, src, type_, 
@@ -42,7 +46,6 @@ import Data.Monoid (mempty, mconcat)
 import GHC.Generics (Rep, Generic)
 import Control.Monad (forM_)
 import qualified Data.Map as M
-
 
 menuItems = [instrumentsMenuItem, myPortfolioMenuItem, marketDataMenuItem, modelDataMenuItem, contractGraphMenuItem]
 instrumentsMenuItem = ("Instruments", "/")
@@ -195,16 +198,20 @@ contractgraphsPage = buildTable (buildThead headerRow, buildTbody $ [(fields ++ 
 
 
 
-portfolioView portfolio defaults = blaze $ layout "My Portfolio" (Just (snd myPortfolioMenuItem)) $ do
-                            div ! class_ "row" $ do
-                                div ! class_ "col-sm-8" $ buildTable (buildThead headerRow, (pfTableBody $ (map pItemRow portfolio)) >> totalRow)
-                                div ! class_ "col-sm-4" $ do
-                                                   pricingForm $ M.fromList defaults
-                                                   a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run valuation"
-                                                   div ! class_ "alert alert-warning" ! id "pricing-form-alert" $ ""
+portfolioView portfolio currDate aggrCashflows defaults =
+    blaze $ layout "My Portfolio" (Just (snd myPortfolioMenuItem)) $ do
+      div ! class_ "row" $ do
+        div ! class_ "col-sm-8" $ do
+                             buildTable (buildThead headerRow, (pfTableBody $ (map pItemRow portfolio)) >> totalRow)
+                             showMorePanel "portfolio-cashflows" ("Portfolio cashflows")  (renderCashflows currDate aggrCashflows)
+        div ! class_ "col-sm-4" $ do
+                             pricingForm $ defaultsMap
+                             a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run valuation"
+                             div ! class_ "alert alert-warning" ! id "pricing-form-alert" $ ""
     where
+      defaultsMap = M.fromList defaults
       headerRow = ["Nominal", "Contract", "Start", "Horizon", "Value", ""]
-      pItemRow (k, p, hz) = [ string $ show $ pFItemNominal p
+      pItemRow (k, p, hz, cf) = [ string $ show $ pFItemNominal p
                             , text $ pFItemContractType p
                             , string $ formatDate $ pFItemStartDate p
                             , string $ formatDate $ hz
@@ -216,14 +223,54 @@ portfolioView portfolio defaults = blaze $ layout "My Portfolio" (Just (snd myPo
                               i ! class_ "glyphicon glyphicon-trash" $ "" ]
       totalRow = tr $ row ["Total", "", "", "", h4 $ span ! class_ "total-output label label-success" $ "", ""]
       pfTableBody rows = mconcat $ map mkTr (zip3 [0 ..] (map row rows) portfolio)
-      mkTr (count, r, (_,p,_)) = do
+      mkTr (count, r, (_,p,_,cf)) = do
         tr ! class_ "pfitem-row"
            ! dataAttribute "toggle" "collapse" 
            ! dataAttribute "target" (stringValue ("#pfitem-details-" ++ show count))
            ! id (stringValue ("pfitem-" ++ show count)) $ r
-        tr ! class_ "collapse"! id (stringValue ("pfitem-details-" ++ show count)) $ td ! colspan "6" $ text $ pFItemContractSpec p
+        tr ! class_ "collapse"! id (stringValue ("pfitem-details-" ++ show count)) $
+           td ! colspan "6" $ do
+             basicPanel $ string $ ppContract $ deserializeContr p
+             cashflowsInfo count cf currDate
       row xs = mconcat $ map (td ! class_ "vert-align fixed-height") xs
 
+basicPanel contents = div ! class_ "panel panel-default" $ div ! class_ "panel-body" $ contents
+ 
+showMorePanel pId title contents =
+    div ! id (stringValue pId) ! class_ "panel panel-default" $ do
+       div ! class_ "panel-heading"
+            $ h4 ! class_ "panel-title"
+                  $ a ! dataAttribute "toggle" "collapse"
+                      ! dataAttribute "target" (stringValue ("#" ++ pId ++ "-details"))
+                      ! href (stringValue ("#" ++ pId)) $ title
+    --div ! id (stringValue (pId ++ "-details")) ! class_ "panel-collapse collapse"
+       div ! id (stringValue (pId ++ "-details")) ! class_ "panel-collapse collapse" $ contents
+
+cashflowsInfo num cfs currDate = showMorePanel ("pfitem-cf-panel-" ++ show num)
+                                               (string "Cashflows")
+                                               (renderCashflows currDate cfs)
+
+renderCashflow currDay (d, cur, p1, p2, certain, e) =
+    let cfHtml = [ hasHappen
+                 , htmlDay
+                 , htmlCertain certain
+                 , string $ "[" ++ p1 ++ "->" ++ p2 ++ "]"
+                 , string $ show cur
+                 , strong $ string $ ppExpr e ] in
+    li ! class_ "list-group-item" $ do mapM_ (span ! class_ "cf-item-spacing") cfHtml
+    where
+      hasHappen = if (contrDate2Day d <= currDay) then i ! class_ "glyphicon glyphicon-ok-circle" $ "" else "" 
+      htmlCertain b = if b then span ! class_ "text-info" $ "Certain" else span ! class_ "text-warning" $ "Uncertain"
+      strDay = string $ formatDate $ contrDate2Day d
+      htmlDay = if (contrDate2Day d <= currDay) then span ! class_ "text-success"$ strDay
+                else strDay
+
+renderCashflows :: Day -> [Cashflow] -> Html
+renderCashflows currDate cfs = ul ! class_ "list-group" $ mapM_ (renderCashflow currDate) cfs
+
+deserializeContr :: PFItem -> Contract
+deserializeContr form = read $ T.unpack $ pFItemContractSpec form
+               
 modelDataView md = do
   blaze $ layout "Model Data" (Just (snd modelDataMenuItem)) $
         buildTable (buildThead headerRow, buildTbody $ (fields ++ [addBtn]) : map toRow md)

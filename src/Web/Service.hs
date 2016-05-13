@@ -12,6 +12,7 @@ import Contract.Type
 import Contract.Environment
 import Contract.Transform
 import Contract.Analysis
+import Contract (cashflows)
 import TypeClass
 import Data
 import PersistentData
@@ -42,6 +43,8 @@ import Database.Persist.Sql (toSqlKey, fromSqlKey)
 import Data.Time (Day, diffDays, addDays)
 import Data.Text (Text)
 import Data.Maybe
+import Data.List (sortBy)
+import Data.Ord (comparing)
 import Data.Time.Clock
 import Data.Time.Calendar
 import Data.Time.Format
@@ -67,11 +70,15 @@ defaultService allContracts dataProvider = do
       res <- liftIO $ mapM (maybeValuate pricingForm dataProvider) $ map P.entityVal pItems
       json $ object [ "prices" .= res
                     , "total"  .= (sum $ map (fromMaybe 0) res) ]
-    get "/portfolio/" $ basicAuth $ do
+    get "/portfolio/" $ basicAuth $ do      
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
       currDate <- liftIO getCurrentTime
-      portfolioView (map (withHorizon . fromEntity) pItems) $
-                    [("currentDate", Just $ show $ utctDay currDate), ("interestRate", Just "2"), ("iterations", Just "10000")]
+      items <- liftIO $ mapM ((withHorAndCashflows dataProvider) . fromEntity) pItems
+      let aggrCashflows = sortBy (comparing (\(d,_,_,_,_,_) -> d)) $ concat $ map (\(_,_,_,cf) -> cf) items
+      portfolioView items (utctDay currDate) aggrCashflows
+                        [ ("currentDate", Just $ show $ utctDay currDate)
+                        , ("interestRate", Just "2")
+                        , ("iterations", Just "10000")]
     delete "/portfolio/:id" $ basicAuth $ do
       pfiId <- param "id"
       let key = toSqlKey (fromIntegral ((read pfiId) :: Integer)) :: P.Key PFItem
@@ -156,6 +163,20 @@ api contractType inputData mkContr =
            pItems <- liftIO $ runDb $ P.insert $ toPFItem commonData contractData $ mkContr (startDate commonData) contractData
            json $ object ["msg" .= ("Contract added successfully" :: String)]
 
+simplWithFixings dataProvider portfItem = do
+  currDate <- liftIO getCurrentTime
+  quotesBefore <- mapM (getRawQuotes $ sDate : filter (<= utctDay currDate) allDays) unds
+  let env = (makeEnv (concat quotesBefore)) $ emptyFrom $ day2ContrDate sDate
+  return $ simplify env mContr
+    where sDate = pFItemStartDate portfItem
+          mZero = (day2ContrDate sDate, zero)
+          mContr = (day2ContrDate sDate, read $ T.unpack $ pFItemContractSpec portfItem)
+          cMeta = extractMeta mContr
+          allDays = map contrDate2Day (allDates cMeta)
+          unds  = underlyings cMeta
+          getRawQuotes = provideQuotes dataProvider
+
+                
 toMap = M.fromList . map (\c -> (url c, c))
 
 -- Parse contents of parameter p as a JSON object and return it. Raises an exception if parse is unsuccessful.
@@ -239,10 +260,15 @@ valuate pricingForm dataProvider portfItem = do
 
 fromEntity p = (show $ fromSqlKey $ P.entityKey p, P.entityVal p)
 
-withHorizon (key, enity) = (key, enity, addDays days $ pFItemStartDate enity) 
+withHorizon (key, entity) = (key, entity, addDays days $ pFItemStartDate entity)
     where
-      days = fromIntegral $ horizon $ read $ T.unpack $ pFItemContractSpec enity
+      days = fromIntegral $ horizon $ read $ T.unpack $ pFItemContractSpec entity
 
+withHorAndCashflows dataProvider (key, entity) = do
+  let days = fromIntegral $ horizon $ read $ T.unpack $ pFItemContractSpec entity
+  c <- simplWithFixings dataProvider entity
+  return (key, entity, addDays days $ pFItemStartDate entity, cashflows $ c)
+         
 createDefaultUser = createIfNotExist (defaultUserId, User "hiperfit" "123")
   
 createDefaultPortfolio = createIfNotExist (defaultPortfolioId, Portfolio "HIPERFIT" (toSqlKey $ fromIntegral defaultUserId))

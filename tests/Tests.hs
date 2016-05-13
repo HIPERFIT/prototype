@@ -7,6 +7,7 @@ import CodeGen.OpenclGen
 import CodeGen.DataGen
 import CodeGen.Utils
 import Pricing
+import Utils
 import Contract.Date
 import qualified Config as Conf
 import qualified SmallContract as SmallC
