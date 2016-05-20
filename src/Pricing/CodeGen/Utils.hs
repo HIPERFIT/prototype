@@ -33,33 +33,53 @@ oDays (Scale e c) t = oDaysE e t ++ oDays c t
 oDays (Transl t' c) t = oDays c (t' + t)
 oDays (If e c1 c2) t = oDaysE e t ++ oDays c1 t ++ oDays c2 t
 oDays (CheckWithin e t' c1 c2) t = concat (map (oDaysE e) [t .. t+t']) ++ oDays c1 t ++ oDays c2 t
-oDays (TransfOne _ _ _) t = []                
+oDays (TransfOne _ _ _) t = []
+oDays (Both c1 c2) t = oDays c1 t ++ oDays c2 t
 oDays Zero _ = []
 
 oDaysE :: Expr a -> Int -> [Int]
+oDaysE (I rLit) t = []
+oDaysE (R rLit) t = []
+oDaysE (B rLit) t = []
+oDaysE (V rLit) t = []
+oDaysE (Pair e1 e2) t = oDaysE e1 t ++ oDaysE e2 t
+oDaysE (Fst e) t = oDaysE e t
+oDaysE (Snd e) t = oDaysE e t
+oDaysE (Obs (_, t')) t = [t' + t]
+oDaysE (ChosenBy (_, t')) t = [t' + t]
+oDaysE (Acc _ _ e) t = oDaysE e t
 oDaysE (Arith _ e1 e2) t = oDaysE e1 t ++ oDaysE e2 t  
 oDaysE (Less e1 e2) t = oDaysE e1 t ++ oDaysE e2 t
+oDaysE (Equal e1 e2) t = oDaysE e1 t ++ oDaysE e2 t
 oDaysE (Or e1 e2) t = oDaysE e1 t ++ oDaysE e2 t
 oDaysE (Not e) t = oDaysE e t
-oDaysE (R rLit) t = []
-oDaysE (Obs (_, t')) t = [t' + t]
 
 observables = sort . nub . getObs
 
 getObs (Scale e c) = getObsE e ++ getObs c
 getObs (Transl t' c) = getObs c
 getObs (If e c1 c2) = getObsE e ++ getObs c1 ++ getObs c2
+getObs (Both c1 c2) = getObs c1 ++ getObs c2
 getObs (CheckWithin e _ c1 c2) = getObsE e ++ getObs c1 ++ getObs c2
 getObs (TransfOne _ _ _) = []                
 getObs Zero = []
 
 getObsE :: Expr a -> [String]
+getObsE (I rLit) = []
+getObsE (R rLit) = []
+getObsE (B rLit) = []
+getObsE (V rLit) = []
+getObsE (Pair e1 e2) = getObsE e1 ++ getObsE e2
+getObsE (Fst e) = getObsE e
+getObsE (Snd e) = getObsE e
+getObsE (Obs (n, _)) = [n]
+getObsE (ChosenBy (n, _)) = [n]
+getObsE (Acc _ _ e) = getObsE e
+getObsE (Not e) = getObsE e
 getObsE (Arith _ e1 e2) = getObsE e1 ++ getObsE e2
 getObsE (Less e1 e2) = getObsE e1 ++ getObsE e2
+getObsE (Equal e1 e2) = getObsE e1 ++ getObsE e2
 getObsE (Or e1 e2) = getObsE e1 ++ getObsE e2
-getObsE (Not e) = getObsE e
-getObsE (R rLit) = []
-getObsE (Obs (n, _)) = [n]
 
 fromManaged (_, c) = c
 

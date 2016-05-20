@@ -20,16 +20,33 @@ instance Read RealE where
                       v <- step readPrec
                       return $ R v
                +++ do
+                     Ident "V" <- lexP
+                     v <- step readPrec
+                     return $ V v
+               +++ do
                      Ident "Arith" <- lexP
                      op <- step readPrec
                      v1 <- step readPrec
                      v2 <- step readPrec
                      return $ Arith op v1 v2
-                   
+               +++ do
+                     Ident "Acc" <- lexP
+                     (var, e1) <- step readPrec
+                     i <- step readPrec
+                     e2 <- step readPrec
+                     return $ Acc (var, e1) i e2
                +++ do
                      Ident "Obs" <- lexP
                      v <- step readPrec
                      return $ Obs v
+
+instance Read IntE where
+    readPrec =
+        do
+          Ident "I" <- lexP
+          v <- step readPrec
+          return $ I v
+
 
 instance Read BoolE where
     readPrec = parens $
@@ -52,3 +69,11 @@ instance Read BoolE where
                     v1 <- step readPrec
                     v2 <- step readPrec
                     return $ Less (v1 :: BoolE ) (v2 :: BoolE)
+               +++ do
+                    Ident "Not" <- lexP
+                    v <- step readPrec
+                    return $ Not v
+               +++ do
+                     Ident "ChosenBy" <- lexP
+                     v <- step readPrec
+                     return $ ChosenBy v

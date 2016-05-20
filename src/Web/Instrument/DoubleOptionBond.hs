@@ -58,4 +58,5 @@ bondPayments ir margin frequency maturity  =  foreach ( daysStep frequency frequ
                                            (
                                            iff  (translExp (nott (iC !|! bC)) (-1) )
                                            (scale ( margin + ir)   (transfOne NOK "I" "B")) 
-                                           zero ) 
+                                           zero )
+
