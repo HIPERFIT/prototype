@@ -4,6 +4,7 @@ module Main where
 import qualified Instrument.VanillaOption as VO
 import qualified Instrument.RainbowOption as RO
 import qualified Instrument.Basket2Option as BO
+import qualified Instrument.DoubleOptionBond as DOB
 import DataProviders.Database
 import DataProviders.Data
 import View
@@ -29,8 +30,9 @@ import Data.Time.Calendar
 instance FromJSON VO.VanillaOption
 instance FromJSON RO.RainbowOption
 instance FromJSON BO.Basket2Option
+instance FromJSON DOB.DoubleOptionBond
 
-allContracts = [VO.vanillaOption, RO.rainbowOption, BO.basket2Option]
+allContracts = [VO.vanillaOption, RO.rainbowOption, BO.basket2Option, DOB.doubleOptionBond]
 defaultPort = 3000
 initialSymbols = ["AAPL", "GOOGL", "CAT", "YHOO", "SHLD", "IBM", "MSFT"]
 
@@ -72,6 +74,7 @@ runServer port = scotty port $
     api (url VO.vanillaOption) (jsonContract :: ActionM VO.VanillaOption) VO.makeContract
     api (url RO.rainbowOption) (jsonContract :: ActionM RO.RainbowOption) RO.makeContract
     api (url BO.basket2Option) (jsonContract :: ActionM BO.Basket2Option) BO.makeContract
+    api (url DOB.doubleOptionBond) (jsonContract :: ActionM DOB.DoubleOptionBond) DOB.makeContract
     defaultService allContracts dbDataProvider
 
 initData :: IO ()
