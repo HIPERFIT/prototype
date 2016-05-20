@@ -14,7 +14,7 @@ import Database.Persist
 import Database.Persist.TH
 import Database.Persist.Sql (rawSql, Single, unSingle, toSqlKey)
 import GHC.Generics
-import Control.Monad (forM, liftM)
+import Control.Monad (forM, liftM, foldM)
 import Control.Monad.Trans (lift)
 
 dbDataProvider = DataProvider { provideQuotes     = getRawQuotes
@@ -26,14 +26,15 @@ dbDataProvider = DataProvider { provideQuotes     = getRawQuotes
                               , storedUnderlyings = availUnderlyings }            
 
 getRawQuotes :: [Day] -> String -> IO [RawQuotes]
-getRawQuotes ds und = mapM ((liftM dbQuotesToRaw) . (getClosestQuote und)) ds
-
+getRawQuotes ds und = liftM concat $ mapM (getClosestQuote und) ds
+                      
+getClosestQuote :: String -> Day -> IO [RawQuotes]
 getClosestQuote und d = do
   -- TODO: probably, we can rewrite this query using selectFirst
   res <- runDb $ selectList [DbQuotesUnderlying ==. (pack und), DbQuotesDate <=. d] [Desc DbQuotesDate, LimitTo 1]
   return $ case res of
-    [] -> error ("No quote for " ++ show d)
-    [Entity k (DbQuotes und _ v u)] -> DbQuotes und d v u
+    [] -> []
+    [Entity k (DbQuotes und _ v u)] -> [dbQuotesToRaw $ DbQuotes und d v u]
 
 getRawModelData :: [Day] -> String -> IO [RawModelData]
 getRawModelData ds und  = mapM ((liftM dbMdToRaw) . (getClosestMd und)) ds
