@@ -41,8 +41,10 @@ Alternatively, it is possible to run the application using `cabal run web` or di
 The executable `./dist/build/web/web` accepts the following command-line options:
 
 ```
-  -i       --initdata   Fetch quotes for a number of stocks (e.g., AAPL and GOOGL) from public sources
-  -p PORT  --port=PORT  Run server on specified port (3000 by default)
+  -i           --initdata             Fetch quotes for a number of stocks (e.g., AAPL and GOOGL) from public sources
+  -p PORT      --port=PORT            Run server on specified port (3000 by default)
+  -r DATAFILE  --readquotes=DATAFILE  Read quotes from specified CSV file and write them to the DB
+  -D           --deletequotes         Delete ALL quotes from the DB
 ```
 
 Emacs Haskell-mode users
