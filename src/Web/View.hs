@@ -5,6 +5,7 @@ module View where
 
 import Contract.Type
 import Contract (cashflows, Cashflow)
+import Contract.Transform (advance)
 
 import DataProviders.Data
 import Utils
@@ -46,6 +47,8 @@ import Data.Monoid (mempty, mconcat)
 import GHC.Generics (Rep, Generic)
 import Control.Monad (forM_)
 import qualified Data.Map as M
+import Data.List (sortBy)
+import Data.Ord (comparing)
 
 menuItems = [instrumentsMenuItem, myPortfolioMenuItem, marketDataMenuItem, modelDataMenuItem, contractGraphMenuItem]
 instrumentsMenuItem = ("Instruments", "/")
@@ -198,20 +201,22 @@ contractgraphsPage = buildTable (buildThead headerRow, buildTbody $ [(fields ++ 
 
 
 
-portfolioView portfolio currDate aggrCashflows defaults =
+portfolioView items currDate defaults =
     blaze $ layout "My Portfolio" (Just (snd myPortfolioMenuItem)) $ do
       div ! class_ "row" $ do
         div ! class_ "col-sm-8" $ do
-                             buildTable (buildThead headerRow, (pfTableBody $ (map pItemRow portfolio)) >> totalRow)
-                             showMorePanel "portfolio-cashflows" ("Portfolio cashflows")  (renderCashflows currDate aggrCashflows)
+                             buildTable (buildThead headerRow, (pfTableBody $ (map pItemRow items)) >> totalRow)
+                             showMorePanel "portfolio-cashflows" ("Portfolio cashflows")
+                                               (renderCashflows currDate aggrCashflows)
         div ! class_ "col-sm-4" $ do
                              pricingForm $ defaultsMap
                              a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run valuation"
                              div ! class_ "alert alert-warning" ! id "pricing-form-alert" $ ""
     where
+      aggrCashflows = sortBy (comparing (\(d,_,_,_,_,_) -> d)) $ concat $ map (\(_,_,_,c) -> cashflows c) items
       defaultsMap = M.fromList defaults
       headerRow = ["Quantity", "Contract", "Start", "Horizon", "Value", ""]
-      pItemRow (k, p, hz, cf) = [ string $ show $ pFItemQuantity p
+      pItemRow (k, p, hz, c) = [ string $ show $ pFItemQuantity p
                             , text $ pFItemContractType p
                             , string $ formatDate $ pFItemStartDate p
                             , string $ formatDate $ hz
@@ -222,16 +227,17 @@ portfolioView portfolio currDate aggrCashflows defaults =
                             , a ! dataAttribute "id" (stringValue k) ! href "#" ! class_ "del-pfitem" $
                               i ! class_ "glyphicon glyphicon-trash" $ "" ]
       totalRow = tr $ row ["Total", "", "", "", h4 $ span ! class_ "total-output label label-success" $ "", ""]
-      pfTableBody rows = mconcat $ map mkTr (zip3 [0 ..] (map row rows) portfolio)
-      mkTr (count, r, (_,p,_,cf)) = do
+      pfTableBody rows = mconcat $ map mkTr (zip3 [0 ..] (map row rows) items)
+      mkTr (count, r, (_,p,_,c)) = do
         tr ! class_ "pfitem-row"
            ! dataAttribute "toggle" "collapse" 
            ! dataAttribute "target" (stringValue ("#pfitem-details-" ++ show count))
            ! id (stringValue ("pfitem-" ++ show count)) $ r
         tr ! class_ "collapse"! id (stringValue ("pfitem-details-" ++ show count)) $
            td ! colspan "6" $ do
-             basicPanel $ string $ ppContract $ deserializeContr p
-             cashflowsInfo count cf currDate
+             showOriginalContract (show count) $ ppContract $ deserializeContr p
+             showSimplifedContract (show count) currDate (pFItemStartDate p) c             
+             cashflowsInfo count (cashflows c) currDate
       row xs = mconcat $ map (td ! class_ "vert-align fixed-height") xs
 
 basicPanel contents = div ! class_ "panel panel-default" $ div ! class_ "panel-body" $ contents
@@ -243,13 +249,25 @@ showMorePanel pId title contents =
                   $ a ! dataAttribute "toggle" "collapse"
                       ! dataAttribute "target" (stringValue ("#" ++ pId ++ "-details"))
                       ! href (stringValue ("#" ++ pId)) $ title
-    --div ! id (stringValue (pId ++ "-details")) ! class_ "panel-collapse collapse"
        div ! id (stringValue (pId ++ "-details")) ! class_ "panel-collapse collapse" $ contents
 
 cashflowsInfo num cfs currDate = showMorePanel ("pfitem-cf-panel-" ++ show num)
                                                (string "Cashflows")
                                                (renderCashflows currDate cfs)
 
+showOriginalContract pId contr =
+    showMorePanel ("pfitem-orig-contr-panel-" ++ pId)
+                  "Original contract"
+                  (div ! class_ "panel-body" $ string contr)
+                                               
+showSimplifedContract pId currDate startDate contr =
+    let contractText = ppContract (snd (advance (fromIntegral (diffDays currDate startDate)) contr))
+    in showMorePanel
+           ("pfitem-simpl-contr-panel-" ++ pId)
+           "Current contract"
+           (div ! class_ "panel-body" $ string contractText)
+
+                                               
 renderCashflow currDay (d, cur, p1, p2, certain, e) =
     let cfHtml = [ hasHappen
                  , htmlDay

@@ -73,9 +73,9 @@ defaultService allContracts dataProvider = do
     get "/portfolio/" $ basicAuth $ do      
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
       currDate <- liftIO getCurrentTime
-      items <- liftIO $ mapM ((withHorAndCashflows dataProvider) . fromEntity) pItems
-      let aggrCashflows = sortBy (comparing (\(d,_,_,_,_,_) -> d)) $ concat $ map (\(_,_,_,cf) -> cf) items
-      portfolioView items (utctDay currDate) aggrCashflows
+      items <- liftIO $ mapM ((withHorAndSimplContr dataProvider) . fromEntity) pItems
+      --let aggrCashflows = sortBy (comparing (\(d,_,_,_,_,_) -> d)) $ concat $ map (\(_,_,_,cf) -> cf) items
+      portfolioView items (utctDay currDate)
                         [ ("currentDate", Just $ show $ utctDay currDate)
                         , ("interestRate", Just "2")
                         , ("iterations", Just "10000")]
@@ -257,17 +257,17 @@ valuate pricingForm dataProvider portfItem = do
     allDays = map contrDate2Day (allDates cMeta)
     unds  = underlyings cMeta
     getRawQuotes = provideQuotes dataProvider
-
+                   
 fromEntity p = (show $ fromSqlKey $ P.entityKey p, P.entityVal p)
 
 withHorizon (key, entity) = (key, entity, addDays days $ pFItemStartDate entity)
     where
       days = fromIntegral $ horizon $ read $ T.unpack $ pFItemContractSpec entity
 
-withHorAndCashflows dataProvider (key, entity) = do
+withHorAndSimplContr dataProvider (key, entity) = do
   let days = fromIntegral $ horizon $ read $ T.unpack $ pFItemContractSpec entity
   c <- simplWithFixings dataProvider entity
-  return (key, entity, addDays days $ pFItemStartDate entity, cashflows $ c)
+  return (key, entity, addDays days $ pFItemStartDate entity, c)
          
 createDefaultUser = createIfNotExist (defaultUserId, User "hiperfit" "123")
   
