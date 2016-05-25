@@ -63,12 +63,12 @@ instance Read BoolE where
                      Ident "Equal" <- lexP
                      v1 <- step readPrec
                      v2 <- step readPrec
-                     return $ Less (v1 :: RealE) (v2 :: RealE)
+                     return $ Equal (v1 :: RealE) (v2 :: RealE)
                +++ do
                     Ident "Or" <- lexP
                     v1 <- step readPrec
                     v2 <- step readPrec
-                    return $ Less (v1 :: BoolE ) (v2 :: BoolE)
+                    return $ Or (v1 :: BoolE ) (v2 :: BoolE)
                +++ do
                     Ident "Not" <- lexP
                     v <- step readPrec
