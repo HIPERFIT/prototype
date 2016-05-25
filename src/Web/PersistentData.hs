@@ -22,7 +22,7 @@ Portfolio
    deriving Show Generic     
 
 PFItem
-   nominal      Int
+   quantity      Int
    contractType Text
    startDate    Day
    contractSpec Text

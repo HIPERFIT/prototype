@@ -189,7 +189,7 @@ jsonContract = jsonParam ("contractData" :: TL.Text)
 
 toPFItem commonData cInput cs = PFItem { pFItemStartDate = startDate commonData
                                        , pFItemContractType = TL.toStrict $ TL.pack $ show $ typeOf cInput
-                                       , pFItemNominal = nominal commonData
+                                       , pFItemQuantity = quantity commonData
                                        , pFItemContractSpec = T.pack $ show cs
                                        , pFItemPortfolioId = toSqlKey $ fromIntegral defaultPortfolioId }
 
@@ -244,9 +244,9 @@ valuate pricingForm dataProvider portfItem = do
       simplContr = advance dt $ simplify env mContr
   (inp, contr) <- makeInput simplContr pricingForm dataProvider
   let iter = DataConf { monteCarloIter =  (iterations pricingForm) }
-      nominal_ = (fromIntegral (pFItemNominal portfItem))
+      quantity_ = (fromIntegral (pFItemQuantity portfItem))
   [val] <- runPricing iter [inp] contr
-  return $  nominal_ * val
+  return $ quantity_ * val
   where
     currDate = fromMaybe sDate $ currentDate pricingForm 
     dt = fromIntegral $ diffDays currDate sDate

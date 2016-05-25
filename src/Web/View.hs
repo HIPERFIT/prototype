@@ -210,8 +210,8 @@ portfolioView portfolio currDate aggrCashflows defaults =
                              div ! class_ "alert alert-warning" ! id "pricing-form-alert" $ ""
     where
       defaultsMap = M.fromList defaults
-      headerRow = ["Nominal", "Contract", "Start", "Horizon", "Value", ""]
-      pItemRow (k, p, hz, cf) = [ string $ show $ pFItemNominal p
+      headerRow = ["Quantity", "Contract", "Start", "Horizon", "Value", ""]
+      pItemRow (k, p, hz, cf) = [ string $ show $ pFItemQuantity p
                             , text $ pFItemContractType p
                             , string $ formatDate $ pFItemStartDate p
                             , string $ formatDate $ hz

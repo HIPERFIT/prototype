@@ -20,7 +20,7 @@ data ContractGUIRepr  =
             , formFields :: [(String, FormField Html)]
             , url        :: String }
 
-data CommonContractData = CommonContractData { nominal   :: Int
+data CommonContractData = CommonContractData { quantity   :: Int
                                              , startDate :: Day }
                         deriving Generic
 
