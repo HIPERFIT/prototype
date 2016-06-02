@@ -196,7 +196,7 @@ $(document).ready(function() {
         resetStyles();
         hideAlerts();
         processing(true);
-        var data = collectData($('.form-control'));
+        var data = collectData($('.form-control, input[type="checkbox"]'));
         var url = '/pricer/';
         $.post(url, { 'conf' : JSON.stringify(data) })
             .done(function(resp) {
