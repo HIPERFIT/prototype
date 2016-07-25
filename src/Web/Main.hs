@@ -6,6 +6,7 @@ import qualified Instrument.RainbowOption as RO
 import qualified Instrument.Basket2Option as BO
 import qualified Instrument.DoubleOptionBond as DOB
 import qualified Instrument.EuroHedgedCommodityBasket as EHCB
+import qualified Instrument.Steepner as IRS
 import qualified DataProviders.Database as DBP
 import qualified DataProviders.Csv as CsvP
 import DataProviders.Data
@@ -39,8 +40,9 @@ instance FromJSON RO.RainbowOption
 instance FromJSON BO.Basket2Option
 instance FromJSON DOB.DoubleOptionBond
 instance FromJSON EHCB.EHCBForm
+instance FromJSON IRS.Steepner
 
-allContracts = [VO.vanillaOption, RO.rainbowOption, BO.basket2Option, DOB.doubleOptionBond, EHCB.euroHedgedCB4]
+allContracts = [VO.vanillaOption, RO.rainbowOption, BO.basket2Option, DOB.doubleOptionBond, EHCB.euroHedgedCB4, IRS.steepner]
 defaultPort = 3000
 initialSymbols = ["AAPL", "GOOGL", "CAT", "YHOO", "SHLD", "IBM", "MSFT"]
 
@@ -88,6 +90,7 @@ runServer port = scotty port $
     api (url BO.basket2Option) (jsonContract :: ActionM BO.Basket2Option) BO.makeContract
     api (url DOB.doubleOptionBond) (jsonContract :: ActionM DOB.DoubleOptionBond) DOB.makeContract
     api (url EHCB.euroHedgedCB4) (jsonContract :: ActionM EHCB.EHCBForm) EHCB.makeContract
+    api (url IRS.steepner) (jsonContract :: ActionM IRS.Steepner) IRS.makeContract
     defaultService allContracts DBP.dbDataProvider
 
 initData :: IO ()

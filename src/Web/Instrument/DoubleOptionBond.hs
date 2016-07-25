@@ -35,7 +35,7 @@ doubleOptionBond =
             , url        = "doubleOptionBond" }
 
 
-iC = chosenBy ("IC", 0) -- Buyer Decision to call
+iC = chosenBy ("IC", 0) --  Issuer Decision to call
 bC = chosenBy ("BC", 0) --  Buyer Decision to call
 
 makeContract startDate optData =
