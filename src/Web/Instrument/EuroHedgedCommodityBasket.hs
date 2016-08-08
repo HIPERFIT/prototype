@@ -21,14 +21,15 @@ import Fields
 
 {-@CODE@-}
 data EHCBForm = VOpt {
-      principal   :: Double
-    , underlying1 :: Underlying
-    , underlying2 :: Underlying
-    , underlying3 :: Underlying
-    , underlying4 :: Underlying
-    , strike      :: Double
-    , protection  :: Double
-    , endDate     :: Day
+      nominalPrice :: Double
+    , referencePrice :: PercentField
+    , underlying1    :: Underlying
+    , underlying2    :: Underlying
+    , underlying3    :: Underlying
+    , underlying4    :: Underlying
+    , strike         :: PercentField
+    , protection     :: PercentField
+    , endDate        :: Day
 } deriving (Show, Generic, Typeable)
 
 
@@ -39,15 +40,18 @@ euroHedgedCB4 =
 
 makeContract startDate optData = 
     let
-        princ    = r $ principal optData
+        np       = r $ nominalPrice optData
+        rp       = r $ fromPercentField $referencePrice optData
         maturity = fromIntegral $ diffDays (endDate optData) startDate
         usdeur   = obs ("USDEUR", 0)
-        theobs1 = obs (underlying1 optData, 0) * usdeur
-        theobs2 = obs (underlying2 optData, 0) * usdeur
-        theobs3 = obs (underlying3 optData, 0) * usdeur
-        theobs4 = obs (underlying4 optData, 0) * usdeur
-        strk  = r $ strike optData
-        protect = r $ protection optData
-        basket = 0.25 * ((theobs1  + theobs2 + theobs3 + theobs4) / strk) - (1-protect/strk)
-        in transl maturity (scale princ (scale  (maxx protect basket) 
-                              (transfOne EUR "you" "me")))
+        theobs1  = obs (underlying1 optData, 0) / obs (underlying1 optData, -maturity) * usdeur
+        -- Observations prices are relative to the price at the beginning of the contract.
+        -- We keep this format to avoid let binding and we keep the same for all 4 observations.
+        theobs2  = obs (underlying2 optData, 0) / obs (underlying2 optData, -maturity) * usdeur
+        theobs3  = obs (underlying3 optData, 0) / obs (underlying3 optData, -maturity) * usdeur
+        theobs4  = obs (underlying4 optData, 0) / obs (underlying4 optData, -maturity) * usdeur
+        strk     = r $ fromPercentField $ strike optData
+        protect  = r $ fromPercentField $ protection optData
+        basket   = 0.25 * (rp *  (theobs1  + theobs2 + theobs3 + theobs4) / strk) - (1-protect/strk)
+        in transl maturity  (scale  (np * (maxx protect basket))
+                              (transfOne EUR "you" "me"))
