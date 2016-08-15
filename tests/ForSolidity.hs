@@ -8,11 +8,11 @@ import CodeGen.OpenclGen
 import CodeGen.DataGen
 import CodeGen.Utils
 
-monthly = map (+30) [0..]
+monthly = map (*30) [0..]
     
 rentContract start years deposit rent =
     ( start
-    , allCs [ both payDeposit payRent
+    , allCs [ payDeposit
             , foreach (take (12 * years) monthly) payRent
             , transl (years * 365) getDepositBack
             ]
