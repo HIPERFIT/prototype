@@ -1,7 +1,7 @@
 TESTS=./dist/build/tests/tests
 WEB=./dist/build/web/web
 API=./dist/build/api_tests/api_tests
-GENERIC_PRICING=./finpar/GenericPricing
+GENERIC_PRICING=./finpar/OptionPricing
 PRICING_ENGINE=$(GENERIC_PRICING)/CppOpenCL
 PRICING_ENGINE_CODE=$(PRICING_ENGINE)/ContractDefs
 PRICING_ENGINE_DATA=$(GENERIC_PRICING)/Data
