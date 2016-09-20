@@ -3,17 +3,12 @@
 
 module View where
 
-import Contract.Type
-import Contract (cashflows, Cashflow)
-import Contract.Transform (advance)
-
 import DataProviders.Data
 import Utils
 import Data
 import TypeClass
 import CodeGen.DataGen (ppDouble)
 import PersistentData
-import Serialization
 import qualified DB
 import qualified Fields as F
 
@@ -31,7 +26,7 @@ import Text.Blaze.Html5 (Html, a, body, button,
                          option, button, span, i, select, 
                          table, tr, td, th, stringValue, tbody, 
                          thead, fieldset, legend, AttributeValue,
-                         pre, canvas, strong)
+                         pre, canvas)
 import Text.Blaze.Html5.Attributes (charset, class_, content, href,
                                     httpEquiv, id, media, name,
                                     placeholder, rel, src, type_, 
@@ -47,8 +42,7 @@ import Data.Monoid (mempty, mconcat)
 import GHC.Generics (Rep, Generic)
 import Control.Monad (forM_)
 import qualified Data.Map as M
-import Data.List (sortBy)
-import Data.Ord (comparing)
+
 
 menuItems = [instrumentsMenuItem, myPortfolioMenuItem, marketDataMenuItem, modelDataMenuItem, contractGraphMenuItem]
 instrumentsMenuItem = ("Instruments", "/")
@@ -156,6 +150,7 @@ marketDataView quotes corrs = blaze $ layout "Market Data" (Just (snd marketData
                      li ! class_ "active" $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#quotes" $ "Quotes"
                      li  $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#corrs" $ "Correlations"
                      li  $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#stockgraphs" $ "Stock Graphs"
+                     --li  $ a ! class_ "tab-link" ! dataAttribute "toggle" "tab" ! href "#volatilitygraphs" $ "Volatility Graphs"
                    div ! class_ "tab-content" $ do
                      div! id "quotes" ! class_ "tab-pane fade in active" $
                         quotesTable quotes
@@ -165,24 +160,31 @@ marketDataView quotes corrs = blaze $ layout "Market Data" (Just (snd marketData
                        stockgraphsPage
                        div ! id "stocklegend" $ ""
                        canvas ! id "stockChart" $ ""
-
+                     --div ! id "volgraphs" ! class_ "tab-pane fade" $ do
+                     --  volatilitygraphsPage
+                     --  div ! id "stocklegend" $ ""
+                     --  canvas ! id "stockChart" $ ""
 
 
 quotesTable quotes = buildTable (buildThead headerRow, buildTbody $ (fields ++ [addBtn]) : map toRow quotes)
     where
-      headerRow = ["Underlying", "Date", "Price", ""]
+      headerRow = ["Underlying", "Date", "Close", ""]
       toRow (und, d, vol) = [ string und, string $ formatDate d, string $ ppDouble 3 vol
                             , dataDelLink (encode (und, formatDate d)) "/marketData/quotes/"]
       fields = map field $ gtoForm (Proxy :: Proxy (Rep DataForm))
       addBtn = a ! class_ "btn btn-lg btn-primary" ! id "add-data" ! href "/marketData/quotes/" $ "Add"
 
-corrsTable corrs = buildTable (buildThead headerRow, buildTbody $ (fields ++ [addBtn]) : map toRow corrs)
+      
+-- MP 1.5.2016 - Add a calculate button
+--corrsTable corrs = buildTable (buildThead headerRow, buildTbody $ (fields ++ [addBtn]) : map toRow corrs)
+corrsTable corrs = buildTable (buildThead headerRow, buildTbody $ (fields ++ [addBtn] ++ [addBtn_2]) : map toRow corrs)
     where
-      headerRow = ["Underlying1", "Underlying2", "Date", "Correlation", ""]
+      headerRow = ["Underlying1", "Underlying2", "Date", "Correlation", "", "Pearson 30day"]
       toRow (und1, und2, d, vol) = [ string und1, string und2, string $ formatDate d, string $ ppDouble 3 vol
                                    , dataDelLink (encode (und1, und2, formatDate d)) "/marketData/corrs/"]
       fields = map field $ gtoForm (Proxy :: Proxy (Rep CorrForm))
       addBtn = a ! class_ "btn btn-lg btn-primary" ! id "add-data-corrs" ! href "/marketData/corrs/" $ "Add"
+      addBtn_2 = a ! class_ "btn btn-lg btn-primary" ! id "calc-corrs" ! href "/marketData/corrsCalc/" $ "Calculate"
 
 
 
@@ -192,6 +194,11 @@ stockgraphsPage = buildTable (buildThead headerRow, buildTbody $ [(fields ++ [ad
       addBtn = a ! class_ "btn btn-lg btn-primary" ! id "stockgraph-btn" ! href "#stockgraph" $ "Show"
       headerRow = ["Underlying 1", "Underlying 2", "Starting date", "End date", "Normalize?", ""]
 
+volatilitygraphsPage = buildTable (buildThead headerRow, buildTbody $ [(fields ++ [addBtn])])
+    where
+      fields = map field $ gtoForm (Proxy :: Proxy (Rep VolatilityGraphForm))
+      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "volatilitygraph-btn" ! href "#volatilitygraph" $ "Show"
+      headerRow = ["Underlying", "Starting date", "End date", ""]
 
 contractgraphsPage = buildTable (buildThead headerRow, buildTbody $ [(fields ++ [addBtn])])
     where
@@ -201,22 +208,16 @@ contractgraphsPage = buildTable (buildThead headerRow, buildTbody $ [(fields ++ 
 
 
 
-portfolioView items currDate defaults =
-    blaze $ layout "My Portfolio" (Just (snd myPortfolioMenuItem)) $ do
-      div ! class_ "row" $ do
-        div ! class_ "col-sm-8" $ do
-                             buildTable (buildThead headerRow, (pfTableBody $ (map pItemRow items)) >> totalRow)
-                             showMorePanel "portfolio-cashflows" ("Portfolio cashflows")
-                                               (renderCashflows currDate aggrCashflows)
-        div ! class_ "col-sm-4" $ do
-                             pricingForm $ defaultsMap
-                             a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run valuation"
-                             div ! class_ "alert alert-warning" ! id "pricing-form-alert" $ ""
+portfolioView portfolio defaults = blaze $ layout "My Portfolio" (Just (snd myPortfolioMenuItem)) $ do
+                            div ! class_ "row" $ do
+                                div ! class_ "col-sm-8" $ buildTable (buildThead headerRow, (pfTableBody $ (map pItemRow portfolio)) >> totalRow)
+                                div ! class_ "col-sm-4" $ do
+                                                   pricingForm $ M.fromList defaults
+                                                   a ! class_ "btn btn-lg btn-primary" ! id "run" ! href "#run" $ "Run valuation"
+                                                   div ! class_ "alert alert-warning" ! id "pricing-form-alert" $ ""
     where
-      aggrCashflows = sortBy (comparing (\(d,_,_,_,_,_) -> d)) $ concat $ map (\(_,_,_,c) -> cashflows c) items
-      defaultsMap = M.fromList defaults
-      headerRow = ["Quantity", "Contract", "Start", "Horizon", "Value", ""]
-      pItemRow (k, p, hz, c) = [ string $ show $ pFItemQuantity p
+      headerRow = ["Nominal", "Contract", "Start", "Horizon", "Value", ""]
+      pItemRow (k, p, hz) = [ string $ show $ pFItemNominal p
                             , text $ pFItemContractType p
                             , string $ formatDate $ pFItemStartDate p
                             , string $ formatDate $ hz
@@ -227,77 +228,28 @@ portfolioView items currDate defaults =
                             , a ! dataAttribute "id" (stringValue k) ! href "#" ! class_ "del-pfitem" $
                               i ! class_ "glyphicon glyphicon-trash" $ "" ]
       totalRow = tr $ row ["Total", "", "", "", h4 $ span ! class_ "total-output label label-success" $ "", ""]
-      pfTableBody rows = mconcat $ map mkTr (zip3 [0 ..] (map row rows) items)
-      mkTr (count, r, (_,p,_,c)) = do
+      pfTableBody rows = mconcat $ map mkTr (zip3 [0 ..] (map row rows) portfolio)
+      mkTr (count, r, (_,p,_)) = do
         tr ! class_ "pfitem-row"
            ! dataAttribute "toggle" "collapse" 
            ! dataAttribute "target" (stringValue ("#pfitem-details-" ++ show count))
            ! id (stringValue ("pfitem-" ++ show count)) $ r
-        tr ! class_ "collapse"! id (stringValue ("pfitem-details-" ++ show count)) $
-           td ! colspan "6" $ do
-             showOriginalContract (show count) $ ppContract $ deserializeContr p
-             showSimplifedContract (show count) currDate (pFItemStartDate p) c             
-             cashflowsInfo count (cashflows c) currDate
+        tr ! class_ "collapse"! id (stringValue ("pfitem-details-" ++ show count)) $ td ! colspan "6" $ text $ pFItemContractSpec p
       row xs = mconcat $ map (td ! class_ "vert-align fixed-height") xs
 
-basicPanel contents = div ! class_ "panel panel-default" $ div ! class_ "panel-body" $ contents
- 
-showMorePanel pId title contents =
-    div ! id (stringValue pId) ! class_ "panel panel-default" $ do
-       div ! class_ "panel-heading"
-            $ h4 ! class_ "panel-title"
-                  $ a ! dataAttribute "toggle" "collapse"
-                      ! dataAttribute "target" (stringValue ("#" ++ pId ++ "-details"))
-                      ! href (stringValue ("#" ++ pId)) $ title
-       div ! id (stringValue (pId ++ "-details")) ! class_ "panel-collapse collapse" $ contents
-
-cashflowsInfo num cfs currDate = showMorePanel ("pfitem-cf-panel-" ++ show num)
-                                               (string "Cashflows")
-                                               (renderCashflows currDate cfs)
-
-showOriginalContract pId contr =
-    showMorePanel ("pfitem-orig-contr-panel-" ++ pId)
-                  "Original contract"
-                  (div ! class_ "panel-body" $ string contr)
-                                               
-showSimplifedContract pId currDate startDate contr =
-    let contractText = ppContract (snd (advance (fromIntegral (diffDays currDate startDate)) contr))
-    in showMorePanel
-           ("pfitem-simpl-contr-panel-" ++ pId)
-           "Current contract"
-           (div ! class_ "panel-body" $ string contractText)
-
-                                               
-renderCashflow currDay (d, cur, p1, p2, certain, e) =
-    let cfHtml = [ hasHappen
-                 , htmlDay
-                 , htmlCertain certain
-                 , string $ "[" ++ p1 ++ "->" ++ p2 ++ "]"
-                 , string $ show cur
-                 , strong $ string $ ppExpr e ] in
-    li ! class_ "list-group-item" $ do mapM_ (span ! class_ "cf-item-spacing") cfHtml
-    where
-      hasHappen = if (contrDate2Day d <= currDay) then i ! class_ "glyphicon glyphicon-ok-circle" $ "" else "" 
-      htmlCertain b = if b then span ! class_ "text-info" $ "Certain" else span ! class_ "text-warning" $ "Uncertain"
-      strDay = string $ formatDate $ contrDate2Day d
-      htmlDay = if (contrDate2Day d <= currDay) then span ! class_ "text-success"$ strDay
-                else strDay
-
-renderCashflows :: Day -> [Cashflow] -> Html
-renderCashflows currDate cfs = ul ! class_ "list-group" $ mapM_ (renderCashflow currDate) cfs
-
-deserializeContr :: PFItem -> Contract
-deserializeContr form = read $ T.unpack $ pFItemContractSpec form
-               
 modelDataView md = do
   blaze $ layout "Model Data" (Just (snd modelDataMenuItem)) $
-        buildTable (buildThead headerRow, buildTbody $ (fields ++ [addBtn]) : map toRow md)
+        buildTable (buildThead headerRow, buildTbody $ (fields ++ [addBtn] ++ [addBtn_2]) : map toRow md)
    where
-     headerRow = ["Underlying", "Date", "Volatility", ""]
+-- MP     headerRow = ["Underlying", "Date", "Volatility", ""]
+     headerRow = ["Underlying", "Date", "Volatility", "Period", "Model", ""]
      toRow (und, d, vol) = [ string und, string $ formatDate d, string $ ppDouble 3 vol
                            , dataDelLink (encode (und, formatDate d)) "/modelData/"]
      fields = map field $ gtoForm (Proxy :: Proxy (Rep DataForm))
+--     fields = map field $ gtoForm (Proxy :: Proxy (Rep DataFormVolatility))
      addBtn = a ! class_ "btn btn-lg btn-primary" ! id "add-data" ! href "/modelData/" $ "Add"
+-- Calculate Volatility
+     addBtn_2 = a ! class_ "btn btn-lg btn-primary" ! id "calc-vol" ! href "/modelData/Calc/" $ "Calculate"
      delLink und d = a ! dataAttribute "und" (stringValue und) ! dataAttribute "date" (stringValue (formatDate d))
                        ! href "/modelData/" ! class_ "del-item" $ i ! class_ "glyphicon glyphicon-trash" $ ""
 

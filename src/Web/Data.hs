@@ -11,6 +11,8 @@ import Data.Text (Text)
 
 type Underlying = String
 
+data VolatilityModel = String
+
 data PercentField = PercentField Double
                   deriving (Show, Generic, Typeable)
 fromPercentField (PercentField a) = a / 100
@@ -20,7 +22,7 @@ data ContractGUIRepr  =
             , formFields :: [(String, FormField Html)]
             , url        :: String }
 
-data CommonContractData = CommonContractData { quantity   :: Int
+data CommonContractData = CommonContractData { nominal   :: Int
                                              , startDate :: Day }
                         deriving Generic
 
@@ -32,7 +34,16 @@ data PricingForm = PricingForm { currentDate  :: Maybe Day
 data DataForm = DataForm { fUnderlying :: Text
                          , fDate       :: Day
                          , fVal        :: Double }
-                deriving Generic
+                 deriving Generic
+                
+data DataFormVolatility = DataFormVolatility { vUnderlying :: Text
+                                             , vstartDate  :: Day
+                                             , volVal      :: Double 
+                                             , vperiod     :: Int
+                                             , vmodel      :: String}
+                 deriving Generic
+
+                
 
 data CorrForm = CorrForm { corrUnd1 :: Text
                          , corrUnd2 :: Text
@@ -44,8 +55,14 @@ data StockGraphForm = StockGraphForm { sUnderlying1 :: Underlying
                                      , sUnderlying2 :: Underlying
                                      , sstartDate :: Day
                                      , sendDate :: Day
-                                     , normalize :: Bool }
+                                     , normalize :: Bool}
                 deriving Generic
+       
+data VolatilityGraphForm = VolatilityGraphForm { volUnderlying :: Underlying
+                                                          ,volstartDate :: Day
+                                                          ,volendDate :: Day}
+                deriving Generic         
+              
 
 data ContractGraphForm = ContractGraphForm { ccontract :: String
                                            , cstartDate :: Maybe Day

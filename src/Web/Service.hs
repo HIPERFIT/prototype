@@ -12,7 +12,6 @@ import Contract.Type
 import Contract.Environment
 import Contract.Transform
 import Contract.Analysis
-import Contract (cashflows)
 import TypeClass
 import Data
 import PersistentData
@@ -22,6 +21,9 @@ import Utils
 import CodeGen.Utils
 import Auth
 import Stocks.FetchStocks
+
+import qualified DataUtils.Volatility as Volatility
+import qualified DataUtils.Correlation as Correlation
 
 import Web.Scotty hiding (body, params)
 import Web.Scotty.Internal.Types hiding (Env)
@@ -43,16 +45,18 @@ import Database.Persist.Sql (toSqlKey, fromSqlKey)
 import Data.Time (Day, diffDays, addDays)
 import Data.Text (Text)
 import Data.Maybe
-import Data.List (sortBy)
-import Data.Ord (comparing)
 import Data.Time.Clock
 import Data.Time.Calendar
 import Data.Time.Format
 import System.Exit
+import DataProviders.Common
+import Contract.Date(at)
+import qualified DataProviders.Database as Database
 
 instance FromJSON CommonContractData
 instance FromJSON PricingForm
 instance FromJSON DataForm
+instance FromJSON DataFormVolatility
 instance FromJSON CorrForm
 instance FromJSON PercentField
 instance FromJSON ContractGraphForm
@@ -70,15 +74,11 @@ defaultService allContracts dataProvider = do
       res <- liftIO $ mapM (maybeValuate pricingForm dataProvider) $ map P.entityVal pItems
       json $ object [ "prices" .= res
                     , "total"  .= (sum $ map (fromMaybe 0) res) ]
-    get "/portfolio/" $ basicAuth $ do      
+    get "/portfolio/" $ basicAuth $ do
       pItems <- liftIO ((runDb $ P.selectList [] []) :: IO [P.Entity PFItem])
       currDate <- liftIO getCurrentTime
-      items <- liftIO $ mapM ((withHorAndSimplContr dataProvider) . fromEntity) pItems
-      --let aggrCashflows = sortBy (comparing (\(d,_,_,_,_,_) -> d)) $ concat $ map (\(_,_,_,cf) -> cf) items
-      portfolioView items (utctDay currDate)
-                        [ ("currentDate", Just $ show $ utctDay currDate)
-                        , ("interestRate", Just "2")
-                        , ("iterations", Just "10000")]
+      portfolioView (map (withHorizon . fromEntity) pItems) $
+                    [("currentDate", Just $ show $ utctDay currDate), ("interestRate", Just "2"), ("iterations", Just "10000")]
     delete "/portfolio/:id" $ basicAuth $ do
       pfiId <- param "id"
       let key = toSqlKey (fromIntegral ((read pfiId) :: Integer)) :: P.Key PFItem
@@ -108,7 +108,14 @@ defaultService allContracts dataProvider = do
       form <- jsonData :: ActionM CorrForm
       let corr = DbCorr (corrUnd1 form) (corrUnd2 form) (corrDate form) (corrVal form) (toSqlKey (fromIntegral defaultUserId))
       liftIO $ runDb $ P.insert_ corr
-      json $ object ["msg" .= ("Data added successfully" :: String)]
+      json $ object ["msg" .= ("Correlation added successfully" :: String)]
+    
+    post "/marketData/corrsCalc/" $ basicAuth $ do
+      unds <- liftIO $ Database.availUnderlyings
+      liftIO $ Database.deleteCorrelations
+      liftIO $ calculateCorrelations unds
+      json $ object ["msg" .= ("Data calculated by Pearson - successfully" :: String)]
+    
     get "/modelData/" $ basicAuth $ do
       md <- liftIO $ storedModelData dataProvider
       modelDataView md
@@ -117,6 +124,13 @@ defaultService allContracts dataProvider = do
       let md = DbModelData (fUnderlying form) (fDate form) (fVal form) (toSqlKey (fromIntegral defaultUserId))
       liftIO $ runDb $ P.insert_ md
       json $ object ["msg" .= ("Data added successfully" :: String)]
+      
+    post "/modelData/Calc/" $ basicAuth $ do
+      unds <- liftIO $ Database.availUnderlyings
+      liftIO $ Database.deleteVolatility
+      liftIO $ calculateVolatility unds
+      json $ object ["msg" .= ("Data calculated by Yang-Zhang 90 day, 20day period - successfully" :: String)]
+    
     delete "/modelData/" $ basicAuth $ do
       key <- jsonData :: ActionM (Text, Day)
       liftIO $ runDb $ P.deleteBy $ (uncurry MDEntry) key
@@ -126,7 +140,19 @@ defaultService allContracts dataProvider = do
       startdate <- param "startdate"
       enddate <- param "enddate"
       stockData <- liftIO $ update_db_quotes stock_id startdate enddate "Yahoo"
+      -- --------------------------------------  
+      -- Calculate volatilities MP
+      -- --------------------------------------  
+      --let f = contrDate2Day $ at startdate
+      --let t = contrDate2Day $ at enddate
+      --qoutes <- liftIO $ Database.getStoredQuotesExtPeriod stock_id f t
+      --let ym = Volatility.getModel "Close" 30 f t
+      --i <- liftIO $ Database.insertVolatilityModel ym
+      --let yz = Volatility.close2Close 30 qoutes
+      --vyz <- liftIO $ Database.insertVolatilities i yz
+      -- --------------------------------------  
       json stockData
+      
     get   "/contractGraph/" $ basicAuth $ do
       contractGraphView
     post  "/contractGraph/contracts/" $ basicAuth $ do
@@ -145,7 +171,7 @@ defaultService allContracts dataProvider = do
       let startdate = daytoString (pFItemStartDate pfItem)
       let enddate = maybeDaytoString (cendDate form)
       a <- liftIO $ mapM (\x -> update_db_quotes x (if startdate < (maybeDaytoString (cstartDate form)) then startdate else maybeDaytoString (cstartDate form)) enddate "Yahoo") unds
-
+      
       let dates = getAllDays (cstartDate form) (cendDate form)
       res <- liftIO $ mapM (maybeValuateGraph pfItem dataProvider form) dates
       json res
@@ -163,20 +189,6 @@ api contractType inputData mkContr =
            pItems <- liftIO $ runDb $ P.insert $ toPFItem commonData contractData $ mkContr (startDate commonData) contractData
            json $ object ["msg" .= ("Contract added successfully" :: String)]
 
-simplWithFixings dataProvider portfItem = do
-  currDate <- liftIO getCurrentTime
-  quotesBefore <- mapM (getRawQuotes $ sDate : filter (<= utctDay currDate) allDays) unds
-  let env = (makeEnv (concat quotesBefore)) $ emptyFrom $ day2ContrDate sDate
-  return $ simplify env mContr
-    where sDate = pFItemStartDate portfItem
-          mZero = (day2ContrDate sDate, zero)
-          mContr = (day2ContrDate sDate, read $ T.unpack $ pFItemContractSpec portfItem)
-          cMeta = extractMeta mContr
-          allDays = map contrDate2Day (allDates cMeta)
-          unds  = underlyings cMeta
-          getRawQuotes = provideQuotes dataProvider
-
-                
 toMap = M.fromList . map (\c -> (url c, c))
 
 -- Parse contents of parameter p as a JSON object and return it. Raises an exception if parse is unsuccessful.
@@ -189,9 +201,72 @@ jsonContract = jsonParam ("contractData" :: TL.Text)
 
 toPFItem commonData cInput cs = PFItem { pFItemStartDate = startDate commonData
                                        , pFItemContractType = TL.toStrict $ TL.pack $ show $ typeOf cInput
-                                       , pFItemQuantity = quantity commonData
+                                       , pFItemNominal = nominal commonData
                                        , pFItemContractSpec = T.pack $ show cs
                                        , pFItemPortfolioId = toSqlKey $ fromIntegral defaultPortfolioId }
+
+                                       
+-- generate volatility for all underlyings in the system
+calculateVolatility :: [String] -> IO Int
+calculateVolatility [] = return 0
+calculateVolatility unds  = do
+   currTime <- getCurrentTime
+   let currDate = utctDay currTime
+   let dateto   = currDate
+   let datefrom = addDays (-60) dateto
+   let ym = Volatility.getModel "Yang-Zhang" 10 datefrom dateto
+   calculateVolatilityLoop unds ym
+   return 0
+ 
+calculateVolatilityLoop :: [String] -> RawVolatilityModel -> IO Int
+calculateVolatilityLoop [] _ = return 0
+calculateVolatilityLoop (und:xs) (name,annN,period,from,to) = do
+   liftIO $ update_db_quotes und (daytoString from) (daytoString to) "Yahoo"
+   quotes <- liftIO $ Database.getStoredQuotesExtPeriod und from to
+   let yz = Volatility.yangZhang period quotes
+   --let yz = Volatility.close2Close period quotes
+   i <- Database.insertVolatilityModel (name,annN,period,from,to)
+   Database.insertVolatilities i yz
+   calculateVolatilityLoop xs (name,annN,period,from,to)
+   return 0
+                                       
+                                       
+-- generate correlations for 30 day period starting today and back
+-- for all underlyings in the system
+calculateCorrelations :: [String] -> IO Int
+calculateCorrelations (und1:xs)  = do
+   currTime <- getCurrentTime
+   let currDate = utctDay currTime
+   let dateto   = currDate
+   let datefrom = addDays (-30) dateto
+   let (und2:ys) = (und1:xs)
+   loopCorrelation (und1:xs) (und2:ys) datefrom dateto
+   return 0
+   
+loopCorrelation :: [String] -> [String] -> Day -> Day -> IO Int
+loopCorrelation [] _ _ _ = return 0
+loopCorrelation _ [] _ _ = return 0
+loopCorrelation (und1:xs) (und2:ys) datefrom dateto = do
+   if und1 == und2
+   then do 
+      loopCorrelation (und1:xs) xs datefrom dateto
+   else do
+     generateCorrelations und1 xs datefrom dateto
+     loopCorrelation xs (und2:ys) datefrom dateto
+   
+generateCorrelations :: String -> [String] -> Day -> Day -> IO Int
+generateCorrelations _ [] _ _ = return 0
+generateCorrelations und1 (und2:xs) datefrom dateto = do
+   liftIO $ update_db_quotes und1 (daytoString datefrom) (daytoString dateto)"Yahoo"
+   liftIO $ update_db_quotes und2 (daytoString datefrom) (daytoString dateto) "Yahoo"
+   quotes1 <- liftIO $ Database.getStoredQuotesExtPeriod und1 datefrom dateto
+   quotes2 <- liftIO $ Database.getStoredQuotesExtPeriod und2 datefrom dateto
+   let logx = Volatility.logReturn quotes1
+   let logy = Volatility.logReturn quotes2
+   let corr_val = Correlation.pearsonCorrelation logx logy
+   let corr_db = DbCorr (T.pack und1) (T.pack und2) dateto corr_val (toSqlKey (fromIntegral defaultUserId))
+   liftIO $ runDb $ P.insert_ corr_db
+   generateCorrelations und1 xs datefrom dateto
 
 -- TODO: Refactoring needed. Possibly, merge with mkData
 makeInput :: MContract -> PricingForm -> DataProvider -> IO ((DiscModel, [Model], MarketData), MContract)
@@ -244,9 +319,9 @@ valuate pricingForm dataProvider portfItem = do
       simplContr = advance dt $ simplify env mContr
   (inp, contr) <- makeInput simplContr pricingForm dataProvider
   let iter = DataConf { monteCarloIter =  (iterations pricingForm) }
-      quantity_ = (fromIntegral (pFItemQuantity portfItem))
+      nominal_ = (fromIntegral (pFItemNominal portfItem))
   [val] <- runPricing iter [inp] contr
-  return $ quantity_ * val
+  return $  nominal_ * val
   where
     currDate = fromMaybe sDate $ currentDate pricingForm 
     dt = fromIntegral $ diffDays currDate sDate
@@ -257,18 +332,13 @@ valuate pricingForm dataProvider portfItem = do
     allDays = map contrDate2Day (allDates cMeta)
     unds  = underlyings cMeta
     getRawQuotes = provideQuotes dataProvider
-                   
+
 fromEntity p = (show $ fromSqlKey $ P.entityKey p, P.entityVal p)
 
-withHorizon (key, entity) = (key, entity, addDays days $ pFItemStartDate entity)
+withHorizon (key, enity) = (key, enity, addDays days $ pFItemStartDate enity) 
     where
-      days = fromIntegral $ horizon $ read $ T.unpack $ pFItemContractSpec entity
+      days = fromIntegral $ horizon $ read $ T.unpack $ pFItemContractSpec enity
 
-withHorAndSimplContr dataProvider (key, entity) = do
-  let days = fromIntegral $ horizon $ read $ T.unpack $ pFItemContractSpec entity
-  c <- simplWithFixings dataProvider entity
-  return (key, entity, addDays days $ pFItemStartDate entity, c)
-         
 createDefaultUser = createIfNotExist (defaultUserId, User "hiperfit" "123")
   
 createDefaultPortfolio = createIfNotExist (defaultPortfolioId, Portfolio "HIPERFIT" (toSqlKey $ fromIntegral defaultUserId))

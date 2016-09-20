@@ -83,6 +83,7 @@ function postData ($inputs, url) {
         })
 }
 
+
 function hideAlerts() {
     $('#pricing-form-alert, #error, #result').empty().hide();
 }
@@ -138,6 +139,34 @@ function createChartStock() {
     var legend="<div class=\"stocklegendcolor\" style=\"background-color:"+color1+";float:left;margin-right:5px;height:20px;width:20px\"></div> "+stock_id1+"<br>";
     if(stock_id2!="")
         legend+="<div class=\"stocklegendcolor\" style=\"background-color:"+color2+";float:left;margin-right:5px;height:20px;width:20px\"></div> "+stock_id2+"<br><br>";
+    $('#stocklegend').html(legend);
+
+}
+
+function createChartVolatility() {
+    var startdate=$('[name="sstartDate"]').val();
+    var enddate=$('[name="sendDate"]').val();
+    var stock_id1=$('[name="sUnderlying1"]').val();
+    var color1="#FF00FF";
+    var color2="#00FF00";
+    $.get("/marketData/stocks/"+stock_id1,{"startdate": startdate, "enddate" : enddate})
+        .done(function(resp) {
+            resp.reverse();
+            var labels=[];
+            var data=[];
+            var options = {datasetFill : false, bezierCurve : false};
+            scale=Math.ceil(resp.length/100);
+            for(var i=0; i<resp.length; i+=scale)
+            {
+                labels.push(resp[i][0]);
+                data.push(resp[i][1]);
+            }
+            var full_data = {labels: labels, datasets: [{label: stock_id1, data: data, strokeColor: color1, pointColor: color1}]};
+            var ctx = document.getElementById("stockChart").getContext("2d");
+            var myLineChart = new Chart(ctx).Line(full_data, options);
+            
+        })
+    var legend="<div class=\"stocklegendcolor\" style=\"background-color:"+color1+";float:left;margin-right:5px;height:20px;width:20px\"></div> "+stock_id1+"<br>";
     $('#stocklegend').html(legend);
 
 }
@@ -247,6 +276,14 @@ $(document).ready(function() {
         postData($('#add-data-corrs').closest('tr').find('.form-control'), 
                  $(this).attr('href'))
     });
+    $('#calc-corrs').click(function(evt) {
+        evt.preventDefault();
+	postData($('#calc-corrs').closest('tr').find('.form-control'),$(this).attr('href'))
+    });
+    $('#calc-vol').click(function(evt) {
+        evt.preventDefault();
+	postData($('calc-vol').closest('tr').find('.form-control'),$(this).attr('href'))
+    });
 
     var url = document.location.toString();
     if (url.match('marketData') && url.match('#')) {
@@ -260,6 +297,12 @@ $(document).ready(function() {
 
     $('#stockgraph-btn').click(function() {
         createChartStock();
+        return false;
+    });
+    
+    $('#volatilitygraph-btn').click(function() {
+        //createChartVolatility();
+        alert("Chart")
         return false;
     });
 

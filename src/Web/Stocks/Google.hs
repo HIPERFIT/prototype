@@ -58,9 +58,20 @@ get_data_csv xs = do
                    leading_zero (date_old !! 0)
     (date_new, ys !! 4)
 
-get_close id start_date end_date = do
+get_data_csvAll xs = do
+    let ys = splitOn "," xs
+    (head(ys), ys !! 1,ys !! 2,ys !! 3,ys !! 4)
+    
+get_all_prices id start_date end_date = do
     s <- pull_data id start_date end_date
     let xs = splitOn "\n" s
     let ys = filter (/="") xs
+    let result = map get_data_csvAll (tail(ys))
+    return( result )
+    
+get_close id start_date end_date = do
+    s <- pull_data id start_date end_date
+    putStrLn s :: IO() -- MP
+    let xs = splitOn "\n" s
+    let ys = filter (/="") xs
     return( map get_data_csv (tail(ys)))
-

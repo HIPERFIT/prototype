@@ -32,6 +32,7 @@ import qualified Data.Text as T
 import qualified Data.Vector as V
 import Database.Persist (insert)
 import Data.Csv
+import Contract.Date(at)
 
 instance FromJSON VO.VanillaOption
 instance FromJSON RO.RainbowOption
@@ -62,9 +63,18 @@ appOpts argv =
                    
 main = do
   runDb $ P.runMigration migrateTables
+
   createDefaultUser
   createDefaultPortfolio
   initializeDataTables
+  
+  let stock1 = "YHOO"
+  let stock2 = "IBM"
+  let datefrom = "2016-04-01"
+  let dateto = "2016-05-06"
+  let f = contrDate2Day $ at datefrom
+  let t = contrDate2Day $ at dateto
+ 
   args <- getArgs
   params <- appOpts args
   port <- System.Environment.lookupEnv "PORT"

@@ -32,16 +32,38 @@ gen_link id start_date end_date =
 
     "&ignore=.csv"
 
+-- Retrieves the data through HTTP and 
 pull_data id start_date end_date = do
-    response <- simpleHTTP $ getRequest (gen_link id start_date end_date)
-    getResponseBody response
+--    response <- simpleHTTP $ getRequest (gen_link id start_date end_date)
+--MP
+  let s = gen_link id start_date end_date
+  --putStrLn s -- Print the request url
+  response <- simpleHTTP $ getRequest (s)
+  getResponseBody response
 
+-- Splits on , and then keep date and 4th column = close value
+-- Date, Open, Low, High, Close
+--  0      1     2   3      4
 get_data_csv xs = do
     let ys = splitOn "," xs
     (head(ys), ys !! 4)
 
+get_data_csvAll xs = do
+    let ys = splitOn "," xs
+    (head(ys), ys !! 1,ys !! 2,ys !! 3,ys !! 4)
+
+get_all_prices id start_date end_date = do
+    s <- pull_data id start_date end_date
+    let xs = splitOn "\n" s
+    let ys = filter (/="") xs
+    let result = map get_data_csvAll (tail(ys))
+    return( result )
+    
+-- The function pulls the data from the service provider
+-- and splits the data on new line
 get_close id start_date end_date = do
     s <- pull_data id start_date end_date
     let xs = splitOn "\n" s
     let ys = filter (/="") xs
     return( map get_data_csv (tail(ys)))
+
