@@ -45,13 +45,14 @@ instance FromJSON IRS.Steepner
 allContracts = [VO.vanillaOption, RO.rainbowOption, BO.basket2Option, DOB.doubleOptionBond, EHCB.euroHedgedCB4, IRS.steepner]
 defaultPort = 3000
 initialSymbols = ["AAPL", "GOOGL", "CAT", "YHOO", "SHLD", "IBM", "MSFT"]
+quotesSource = "Google"
 
 data Flag = Port String | InitData | DataFile String | DelQuotes
       deriving Show
    
 options :: [OptDescr Flag]
 options =
-    [ Option ['i'] ["initdata"] (NoArg InitData)     "Fetch quotes for a number of stocks (e.g., AAPL and GOOGL) from Yahoo"
+    [ Option ['i'] ["initdata"] (NoArg InitData)     ("Fetch quotes for " ++ show initialSymbols ++ " from " ++ quotesSource)
     , Option ['p'] ["port"]     (ReqArg Port "PORT") "Run server on specified port (3000 by default)"
     , Option ['r'] ["readquotes"] (ReqArg DataFile "DATAFILE") "Read quotes from specified CSV file and write them to the DB"
     , Option ['D'] ["deletequotes"] (NoArg DelQuotes) "Delete ALL quotes from the DB"
@@ -98,12 +99,12 @@ initData = do
   currTime <- getCurrentTime
   let currDate = utctDay currTime
   putStrLn "Fetching initial data..."
-  mapM_ (\x -> F.update_db_quotes x (formatDate (addDays (-90) currDate)) (formatDate currDate) "Yahoo") initialSymbols
+  mapM_ (\x -> F.update_db_quotes x (formatDate (addDays (-90) currDate)) (formatDate currDate) "Google") initialSymbols
   putStrLn "Done."
   return ()
 
 delQuotes = runDb $ P.deleteWhere ([] :: [P.Filter DbQuotes])
-         
+
 insertFromCsv csvFile = do
   csvQuotes <- BL.readFile csvFile
   let quotes = case decode NoHeader csvQuotes of

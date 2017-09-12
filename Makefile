@@ -33,5 +33,5 @@ run_apitests:dependencies
 	$(API)
 
 init_data:
-	cabal build web
+	stack build web
 	$(WEB) -i
